@@ -37,6 +37,13 @@
             100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
         }
         .saving-pulse { animation: pulse-green 1s infinite; }
+        
+        /* Chat badge animation */
+        @keyframes bounce-small {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+        .badge-bounce { animation: bounce-small 2s infinite; }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-200">
@@ -61,6 +68,10 @@
         }
         const auth = firebase.auth();
         const db = firebase.firestore();
+
+        // --- SOUNDS ---
+        // Simple pop sound base64
+        const NOTIFICATION_SOUND = "data:audio/mp3;base64,//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq";
 
         // --- ICONS SYSTEM (Fixed Size Issue) ---
         const { useState, useEffect, useRef } = React;
@@ -140,10 +151,20 @@
             const [isOpen, setIsOpen] = useState(false);
             const [messages, setMessages] = useState([]);
             const [newMessage, setNewMessage] = useState("");
+            const [unreadCount, setUnreadCount] = useState(0);
             const messagesEndRef = useRef(null);
+            
+            // Ref to track last message count to detect new messages
+            const lastMessageCount = useRef(0);
+            const isFirstLoad = useRef(true);
+
+            const playSound = () => {
+                const audio = new Audio(NOTIFICATION_SOUND);
+                audio.play().catch(e => console.log("Audio play failed (interaction needed)", e));
+            };
 
             useEffect(() => {
-                if (!isOpen || !chatRoomId) return;
+                if (!chatRoomId) return;
                 
                 const unsubscribe = db.collection("chats")
                     .doc(chatRoomId)
@@ -152,10 +173,38 @@
                     .onSnapshot((snapshot) => {
                         const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                         setMessages(msgs);
-                        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+                        
+                        // New message detection logic
+                        if (isFirstLoad.current) {
+                            lastMessageCount.current = msgs.length;
+                            isFirstLoad.current = false;
+                        } else if (msgs.length > lastMessageCount.current) {
+                            const lastMsg = msgs[msgs.length - 1];
+                            // If the last message is NOT from me
+                            if (lastMsg.uid !== user.uid) {
+                                playSound();
+                                if (!isOpen) {
+                                    setUnreadCount(prev => prev + 1);
+                                }
+                            }
+                            lastMessageCount.current = msgs.length;
+                        }
+
+                        // Scroll to bottom only if open
+                        if (isOpen) {
+                            setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+                        }
                     });
                 return () => unsubscribe();
-            }, [isOpen, chatRoomId]);
+            }, [chatRoomId, user.uid, isOpen]);
+
+            // Reset unread count when opened
+            useEffect(() => {
+                if (isOpen) {
+                    setUnreadCount(0);
+                    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+                }
+            }, [isOpen]);
 
             const handleSend = async (e) => {
                 e.preventDefault();
@@ -186,7 +235,8 @@
                                 <h3 className="text-white font-bold text-sm flex items-center gap-2">
                                     <Icons.MessageCircle size={16} className="text-blue-400"/> {targetName}
                                 </h3>
-                                <button onClick={() => setIsOpen(false)} className="text-slate-400 hover:text-white"><Icons.X size={16}/></button>
+                                {/* Fixed Close Button */}
+                                <button onClick={() => setIsOpen(false)} className="text-slate-400 hover:text-white p-2 rounded-full hover:bg-slate-700 transition-colors"><Icons.X size={18}/></button>
                             </div>
                             
                             <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
@@ -218,9 +268,18 @@
                     
                     <button 
                         onClick={() => setIsOpen(!isOpen)}
-                        className="bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-full shadow-lg shadow-blue-900/50 transition-all hover:scale-105 active:scale-95"
+                        className={`
+                            relative p-4 rounded-full shadow-lg shadow-blue-900/50 transition-all hover:scale-105 active:scale-95
+                            ${unreadCount > 0 ? 'bg-green-600 hover:bg-green-500' : 'bg-blue-600 hover:bg-blue-500'}
+                            text-white
+                        `}
                     >
                         <Icons.MessageCircle size={24} />
+                        {unreadCount > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-slate-950 badge-bounce">
+                                {unreadCount}
+                            </span>
+                        )}
                     </button>
                 </div>
             );
