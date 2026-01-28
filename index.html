@@ -29,6 +29,14 @@
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .animate-in { animation: fadeIn 0.3s ease-out; }
         .slide-in { animation: slideUp 0.3s ease-out; }
+        
+        /* Auto-save indicator animation */
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); }
+            70% { box-shadow: 0 0 0 6px rgba(74, 222, 128, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+        }
+        .saving-pulse { animation: pulse-green 1s infinite; }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-200">
@@ -74,7 +82,8 @@
             Send: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>,
             LogOut: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
             User: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
-            Users: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Users: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+            CheckCircle2: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
         };
 
         const { useState, useEffect, useRef } = React;
@@ -108,7 +117,7 @@
         // --- COMPONENTS ---
 
         const ChatWidget = ({ user, chatRoomId, targetName }) => {
-            if (!chatRoomId) return null; // Chat odası yoksa (örn: Coach dashboard'da) gösterme
+            if (!chatRoomId) return null;
 
             const [isOpen, setIsOpen] = useState(false);
             const [messages, setMessages] = useState([]);
@@ -118,7 +127,6 @@
             useEffect(() => {
                 if (!isOpen || !chatRoomId) return;
                 
-                // Mesajlar artık global "messages" yerine "chats/{chatRoomId}/messages" altında
                 const unsubscribe = db.collection("chats")
                     .doc(chatRoomId)
                     .collection("messages")
@@ -218,9 +226,8 @@
             const [isLoading, setIsLoading] = useState(true);
             const [deleteConfirm, setDeleteConfirm] = useState(false);
             
-            // Yeni State'ler (Coach Logic)
             const [athleteList, setAthleteList] = useState([]);
-            const [selectedAthleteId, setSelectedAthleteId] = useState(null); // Coach'un görüntülediği atlet
+            const [selectedAthleteId, setSelectedAthleteId] = useState(null);
 
             // Admin Kontrolü
             const isCoach = user?.email === ADMIN_EMAIL;
@@ -229,7 +236,6 @@
                 const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
                     setUser(currentUser);
                     if (currentUser) {
-                        // Kullanıcı giriş yaptığında 'users' koleksiyonuna kaydet (ki coach listeyi görebilsin)
                         await db.collection('users').doc(currentUser.uid).set({
                             uid: currentUser.uid,
                             email: currentUser.email,
@@ -238,7 +244,6 @@
                             lastLogin: firebase.firestore.FieldValue.serverTimestamp()
                         }, { merge: true });
 
-                        // Eğer kullanıcı atlet ise, otomatik olarak kendi ID'sini seç
                         if (currentUser.email !== ADMIN_EMAIL) {
                             setSelectedAthleteId(currentUser.uid);
                         }
@@ -248,39 +253,28 @@
                 return () => unsubscribe();
             }, []);
 
-            // Coach için Atlet Listesini Çek
             useEffect(() => {
                 if (isCoach) {
                     const unsubscribe = db.collection('users').onSnapshot(snapshot => {
                         const users = snapshot.docs
                             .map(doc => doc.data())
-                            .filter(u => u.email !== ADMIN_EMAIL); // Coach'u listeden çıkar
+                            .filter(u => u.email !== ADMIN_EMAIL);
                         setAthleteList(users);
                     });
                     return () => unsubscribe();
                 }
             }, [isCoach]);
 
-            // Seçili Atlete Göre Veri Çekme (Dinamik Query)
             useEffect(() => {
                 if (!selectedAthleteId) return;
-
-                // Query: Seçilen atletin ID'sine sahip antrenmanları getir
-                // Not: Burada daha basit olması için doc ID'yi "ATHLETEID_DATE" formatında tutacağız.
-                // Böylece tüm koleksiyonu çekip filtrelemek yerine, sadece o kullanıcıya ait olanları
-                // koleksiyon query'si ile alabiliriz veya (daha basiti) mevcut yapıyı koruyup
-                // "workouts" koleksiyonunu dinleyip client-side filtreleriz (küçük ölçek için ok).
-                // Ölçeklenebilirlik için "where" query kullanıyoruz.
                 
                 const unsubscribe = db.collection("workouts")
                     .where("athleteUid", "==", selectedAthleteId)
                     .onSnapshot((snapshot) => {
                         const data = {};
                         snapshot.forEach(doc => {
-                            // Doc ID: "uid_date" formatında olacak, ama biz UI'da tarihi key olarak kullanıyoruz.
-                            // Doc ID'den tarihi ayıralım veya data içine tarihi de kaydedelim.
                             const workoutData = doc.data();
-                            const dateKey = doc.id.split('_').pop(); // "uid_2026-01-01" -> "2026-01-01"
+                            const dateKey = doc.id.split('_').pop(); 
                             if(dateKey) data[dateKey] = { ...workoutData, id: doc.id };
                         });
                         setWorkouts(data);
@@ -315,7 +309,8 @@
                 setIsModalOpen(true);
             };
 
-            const handleSaveWorkout = async (e) => {
+            // Coach için Kaydetme (Manuel)
+            const handleCoachSave = async (e) => {
                 e.preventDefault();
                 if (!user || !selectedAthleteId) return;
 
@@ -323,7 +318,7 @@
                 const zoneVal = formData.get('zone');
 
                 const updatedWorkout = {
-                    athleteUid: selectedAthleteId, // Kime ait olduğu
+                    athleteUid: selectedAthleteId,
                     title: formData.get('title'),
                     type: formData.get('type'),
                     type2: formData.get('type2'), 
@@ -333,13 +328,11 @@
                     description: formData.get('description'),
                     status: formData.get('status'),
                     coachNote: formData.get('coachNote'),
-                    userNote: formData.get('userNote'),
+                    userNote: formData.get('userNote'), // Coach bunu değiştirebilir
                     updatedBy: user.email,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
 
-                // DOKÜMAN ID FORMATI: "USERID_TARİH"
-                // Bu sayede her kullanıcının aynı gün için ayrı kaydı olur.
                 const docId = `${selectedAthleteId}_${selectedDate}`;
 
                 try {
@@ -348,6 +341,38 @@
                 } catch (err) {
                     console.error("Kaydetme hatası:", err);
                     alert("Kaydedilemedi!");
+                }
+            };
+
+            // Atlet için Otomatik Kayıt (onBlur ile)
+            const handleAthleteNoteSave = async (noteText) => {
+                // Eğer note boşsa ve o günde henüz kayıtlı bir workout yoksa (Coach bir şey girmemişse)
+                // yeni bir doküman oluşturma. Böylece boş "workout emojisi" oluşmaz.
+                const workoutExists = workouts[selectedDate];
+                if (!workoutExists && !noteText.trim()) return;
+
+                const docId = `${selectedAthleteId}_${selectedDate}`;
+                
+                try {
+                    // Eğer workout yoksa minimum veriyle oluştur (type: workout varsayılan)
+                    // Amaç: Atletin notunu tutmak.
+                    const payload = {
+                        userNote: noteText,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+
+                    if (!workoutExists) {
+                        payload.athleteUid = selectedAthleteId;
+                        payload.type = 'workout'; // Varsayılan tip
+                        payload.status = 'pending';
+                        payload.km = "";
+                        payload.title = "Serbest Antrenman";
+                    }
+
+                    await db.collection("workouts").doc(docId).set(payload, { merge: true });
+                    // Başarılı (Sessiz)
+                } catch (err) {
+                    console.error("Otomatik kayıt hatası:", err);
                 }
             };
 
@@ -371,17 +396,28 @@
                 const workout = workouts[selectedDate] || {};
                 const hasWorkout = !!workouts[selectedDate];
                 
-                // Permission Check: Coach her şeyi yapabilir, Athlete sadece User Note girebilir.
-                // Status değişimi için: Coach değiştirebilir, Athlete değiştiremez (Prompt isteği)
                 const canEditDetails = isCoach; 
                 const canEditStatus = isCoach; 
+
+                // Atlet için User Note State'i (Auto-save için local state lazım)
+                const [localUserNote, setLocalUserNote] = useState(workout.userNote || "");
+                const [saveStatus, setSaveStatus] = useState("idle"); // idle, saving, saved
+
+                const onUserNoteBlur = () => {
+                    if (localUserNote !== (workout.userNote || "")) {
+                        setSaveStatus("saving");
+                        handleAthleteNoteSave(localUserNote).then(() => {
+                            setSaveStatus("saved");
+                            setTimeout(() => setSaveStatus("idle"), 2000);
+                        });
+                    }
+                };
 
                 return (
                     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/80 backdrop-blur-md animate-in">
                         <div className="bg-slate-900 w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl border border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[95vh] slide-in">
                             <div className="bg-slate-800/50 p-4 border-b border-slate-700 flex justify-between items-center sticky top-0 z-10 backdrop-blur-sm">
                                 <div className="flex items-center gap-3">
-                                    {/* Silme Butonu: Sadece Coach ve var olan antrenman için */}
                                     {hasWorkout && isCoach && (
                                         <button type="button" onClick={handleDeleteWorkout} className={`p-2 rounded-full transition-all border mr-1 group flex items-center gap-2 ${deleteConfirm ? "bg-red-600 text-white border-red-600 w-auto px-3" : "bg-red-500/10 hover:bg-red-500/20 text-red-500 border-red-500/20"}`} title="Sil">
                                             <Icons.Trash2 size={18} /> {deleteConfirm && <span className="text-xs font-bold whitespace-nowrap">Sil?</span>}
@@ -392,11 +428,11 @@
                                         <h2 className="text-xl font-bold text-white tracking-tight">{selectedDate.split('-').reverse().join('.')}</h2>
                                     </div>
                                 </div>
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="bg-slate-800 hover:bg-slate-700 text-slate-300 p-2 rounded-full transition-colors border border-slate-700"><Icons.X size={20} /></button>
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white p-2 transition-colors"><Icons.X size={24} /></button>
                             </div>
 
                             <div className="p-5 overflow-y-auto custom-scrollbar">
-                                <form id="workoutForm" key={selectedDate} onSubmit={handleSaveWorkout} className="space-y-6">
+                                <form id="workoutForm" key={selectedDate} onSubmit={handleCoachSave} className="space-y-6">
                                     <div className="flex gap-2">
                                         {Object.entries(STATUS_CONFIG).map(([key, config]) => (
                                             <label key={key} className="flex-1 cursor-pointer group relative">
@@ -464,19 +500,39 @@
                                             <label className="flex items-center gap-2 text-[10px] font-bold text-blue-400 mb-2 uppercase"><Icons.Activity size={12} /> Coach Notu</label>
                                             <textarea name="coachNote" defaultValue={workout.coachNote} className="w-full bg-transparent border-0 p-0 text-blue-100 text-sm focus:ring-0 placeholder-blue-500/30" placeholder="Notunuzu buraya girin..." readOnly={!canEditDetails} />
                                         </div>
-                                        <div className="bg-emerald-950/20 p-3 rounded-xl border border-emerald-900/30">
-                                            <label className="flex items-center gap-2 text-[10px] font-bold text-emerald-400 mb-2 uppercase"><Icons.Heart size={12} /> Sporcu Notu</label>
-                                            <textarea name="userNote" defaultValue={workout.userNote} className="w-full bg-transparent border-0 p-0 text-emerald-100 text-sm focus:ring-0 placeholder-emerald-500/30" placeholder="Sporcu geri bildirimi..." />
+                                        <div className="bg-emerald-950/20 p-3 rounded-xl border border-emerald-900/30 relative">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <label className="flex items-center gap-2 text-[10px] font-bold text-emerald-400 uppercase"><Icons.Heart size={12} /> Sporcu Notu</label>
+                                                {/* Atlet için auto-save indicator */}
+                                                {!isCoach && saveStatus === 'saved' && <span className="text-[10px] text-emerald-400 flex items-center gap-1"><Icons.CheckCircle2 size={12} /> Kaydedildi</span>}
+                                            </div>
+                                            
+                                            {/* Atletler için textarea (Auto-save) */}
+                                            {!isCoach ? (
+                                                <textarea 
+                                                    value={localUserNote}
+                                                    onChange={(e) => setLocalUserNote(e.target.value)}
+                                                    onBlur={onUserNoteBlur}
+                                                    className="w-full bg-transparent border-0 p-0 text-emerald-100 text-sm focus:ring-0 placeholder-emerald-500/30" 
+                                                    placeholder="Antrenman nasıl geçti? Notlarını buraya yaz..." 
+                                                />
+                                            ) : (
+                                                /* Coach için read-only veya editable (Coach da düzenleyebilir ama kaydet butonuyla) */
+                                                <textarea name="userNote" defaultValue={workout.userNote} className="w-full bg-transparent border-0 p-0 text-emerald-100 text-sm focus:ring-0 placeholder-emerald-500/30" placeholder="Sporcu notu..." />
+                                            )}
                                         </div>
                                     </div>
                                     <div className="h-6 sm:h-0"></div>
                                 </form>
                             </div>
 
-                            <div className="p-4 border-t border-slate-800 bg-slate-900 flex gap-3 sticky bottom-0 z-10 pb-8 sm:pb-4">
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3.5 rounded-xl font-medium text-slate-400 hover:bg-slate-800 transition-colors">Vazgeç</button>
-                                <button type="submit" form="workoutForm" className="flex-[2] py-3.5 rounded-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-900/40 active:scale-95 transition-all">Kaydet</button>
-                            </div>
+                            {/* Sadece Coach için Footer (Kaydet Butonu) */}
+                            {isCoach && (
+                                <div className="p-4 border-t border-slate-800 bg-slate-900 flex gap-3 sticky bottom-0 z-10 pb-8 sm:pb-4">
+                                    <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3.5 rounded-xl font-medium text-slate-400 hover:bg-slate-800 transition-colors">Vazgeç</button>
+                                    <button type="submit" form="workoutForm" className="flex-[2] py-3.5 rounded-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-900/40 active:scale-95 transition-all">Kaydet</button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 );
@@ -485,7 +541,6 @@
             if (isLoading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Yükleniyor...</div>;
             if (!user) return <LoginScreen onLogin={handleGoogleLogin} />;
 
-            // --- COACH DASHBOARD (ATLET LİSTESİ) ---
             if (isCoach && !selectedAthleteId) {
                 return (
                     <div className="min-h-screen bg-slate-950 text-slate-200 p-6 animate-in">
@@ -518,19 +573,16 @@
                                 )}
                             </div>
                         </div>
-                        {/* Coach için Dashboard'da sohbet yok, atlet seçince gelecek */}
                     </div>
                 );
             }
 
-            // --- CALENDAR VIEW (FOR BOTH) ---
             return (
                 <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-blue-500/30 pb-24 animate-in">
                     <div className="sticky top-0 z-30 bg-slate-950/80 backdrop-blur-md border-b border-slate-800">
                         <div className="max-w-md mx-auto px-4 pt-4 pb-2">
                             <div className="flex justify-between items-center mb-4">
                                 <div className="flex items-center gap-3">
-                                    {/* Coach ise Geri Dön butonu, değilse Logo */}
                                     {isCoach ? (
                                         <button onClick={() => setSelectedAthleteId(null)} className="flex items-center gap-2 text-slate-400 hover:text-white transition">
                                             <Icons.ChevronLeft size={20} /> <span className="text-sm font-bold">Atletler</span>
@@ -540,7 +592,6 @@
                                     )}
                                     
                                     <div>
-                                        {/* Başlık: Coach ise izlediği atletin adı, değilse uygulama adı */}
                                         <h1 className="text-lg font-bold text-white leading-none tracking-tight text-right">
                                             {isCoach 
                                                 ? (athleteList.find(a => a.uid === selectedAthleteId)?.displayName || 'Atlet') 
