@@ -22,21 +22,21 @@
 
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .animate-in { animation: fadeIn 0.3s ease-out; }
         .slide-in { animation: slideUp 0.3s ease-out; }
         
         /* Auto-save indicator animation */
-        @keyframes pulse-green {
-            0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); }
-            70% { box-shadow: 0 0 0 6px rgba(74, 222, 128, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+        @keyframes pulse-cyan {
+            0% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.7); }
+            70% { box-shadow: 0 0 0 6px rgba(34, 211, 238, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0); }
         }
-        .saving-pulse { animation: pulse-green 1s infinite; }
+        .saving-pulse { animation: pulse-cyan 1s infinite; }
         
         /* Chat badge animation */
         @keyframes bounce-small {
@@ -44,6 +44,12 @@
             50% { transform: translateY(-3px); }
         }
         .badge-bounce { animation: bounce-small 2s infinite; }
+
+        /* Notification Dot Pulse */
+        @keyframes ping-slow {
+            75%, 100% { transform: scale(2); opacity: 0; }
+        }
+        .animate-ping-slow { animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-200">
@@ -52,6 +58,7 @@
     <script type="text/babel">
         // --- CONFIGURATION ---
         const ADMIN_EMAIL = "oray.gungor@gmail.com";
+        const APP_VERSION = "v0.11";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCu-H_z8dwFV7tc4uS1o79SDD-Cm7Hvei4",
@@ -70,26 +77,13 @@
         const db = firebase.firestore();
 
         // --- SOUNDS ---
-        // Simple pop sound base64
-        const NOTIFICATION_SOUND = "data:audio/mp3;base64,//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq";
+        const NOTIFICATION_SOUND = "data:audio/mp3;base64,//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq";
 
-        // --- ICONS SYSTEM (Fixed Size Issue) ---
+        // --- ICONS SYSTEM ---
         const { useState, useEffect, useRef } = React;
 
-        // Base Icon Component to handle sizing correctly
         const IconBase = ({ size = 24, children, ...props }) => (
-            <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                width={size} 
-                height={size} 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                {...props}
-            >
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
                 {children}
             </svg>
         );
@@ -114,7 +108,8 @@
             LogOut: (props) => <IconBase {...props}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></IconBase>,
             User: (props) => <IconBase {...props}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconBase>,
             Users: (props) => <IconBase {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></IconBase>,
-            CheckCircle2: (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></IconBase>
+            CheckCircle2: (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></IconBase>,
+            Bell: (props) => <IconBase {...props}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></IconBase>
         };
 
         const WORKOUT_TYPES = {
@@ -153,78 +148,41 @@
             const [newMessage, setNewMessage] = useState("");
             const [unreadCount, setUnreadCount] = useState(0);
             const messagesEndRef = useRef(null);
-            
-            // Ref to track last message count to detect new messages
             const lastMessageCount = useRef(0);
             const isFirstLoad = useRef(true);
 
             const playSound = () => {
                 const audio = new Audio(NOTIFICATION_SOUND);
-                audio.play().catch(e => console.log("Audio play failed (interaction needed)", e));
+                audio.play().catch(e => console.log("Audio play failed"));
             };
 
             useEffect(() => {
                 if (!chatRoomId) return;
-                
-                const unsubscribe = db.collection("chats")
-                    .doc(chatRoomId)
-                    .collection("messages")
-                    .orderBy("createdAt", "asc")
-                    .onSnapshot((snapshot) => {
-                        const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        setMessages(msgs);
-                        
-                        // New message detection logic
-                        if (isFirstLoad.current) {
-                            lastMessageCount.current = msgs.length;
-                            isFirstLoad.current = false;
-                        } else if (msgs.length > lastMessageCount.current) {
-                            const lastMsg = msgs[msgs.length - 1];
-                            // If the last message is NOT from me
-                            if (lastMsg.uid !== user.uid) {
-                                playSound();
-                                if (!isOpen) {
-                                    setUnreadCount(prev => prev + 1);
-                                }
-                            }
-                            lastMessageCount.current = msgs.length;
-                        }
-
-                        // Scroll to bottom only if open
-                        if (isOpen) {
-                            setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-                        }
-                    });
+                const unsubscribe = db.collection("chats").doc(chatRoomId).collection("messages").orderBy("createdAt", "asc").onSnapshot((snapshot) => {
+                    const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    setMessages(msgs);
+                    if (isFirstLoad.current) { lastMessageCount.current = msgs.length; isFirstLoad.current = false; }
+                    else if (msgs.length > lastMessageCount.current) {
+                        const lastMsg = msgs[msgs.length - 1];
+                        if (lastMsg.uid !== user.uid) { playSound(); if (!isOpen) setUnreadCount(prev => prev + 1); }
+                        lastMessageCount.current = msgs.length;
+                    }
+                    if (isOpen) setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+                });
                 return () => unsubscribe();
             }, [chatRoomId, user.uid, isOpen]);
 
-            // Reset unread count when opened
-            useEffect(() => {
-                if (isOpen) {
-                    setUnreadCount(0);
-                    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-                }
-            }, [isOpen]);
+            useEffect(() => { if (isOpen) { setUnreadCount(0); setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100); } }, [isOpen]);
 
             const handleSend = async (e) => {
                 e.preventDefault();
                 if (!newMessage.trim() || !chatRoomId) return;
-                
                 try {
-                    await db.collection("chats")
-                        .doc(chatRoomId)
-                        .collection("messages")
-                        .add({
-                            text: newMessage,
-                            uid: user.uid,
-                            displayName: user.displayName || "User",
-                            photoURL: user.photoURL,
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
+                    await db.collection("chats").doc(chatRoomId).collection("messages").add({
+                        text: newMessage, uid: user.uid, displayName: user.displayName || "User", photoURL: user.photoURL, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
                     setNewMessage("");
-                } catch (error) {
-                    console.error("Mesaj hatası:", error);
-                }
+                } catch (error) { console.error("Mesaj hatası:", error); }
             };
 
             return (
@@ -232,18 +190,14 @@
                     {isOpen && (
                         <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-80 h-96 mb-4 flex flex-col overflow-hidden slide-in">
                             <div className="bg-slate-800 p-3 border-b border-slate-700 flex justify-between items-center">
-                                <h3 className="text-white font-bold text-sm flex items-center gap-2">
-                                    <Icons.MessageCircle size={16} className="text-blue-400"/> {targetName}
-                                </h3>
-                                {/* Fixed Close Button */}
+                                <h3 className="text-white font-bold text-sm flex items-center gap-2"><Icons.MessageCircle size={16} className="text-cyan-400"/> {targetName}</h3>
                                 <button onClick={() => setIsOpen(false)} className="text-slate-400 hover:text-white p-2 rounded-full hover:bg-slate-700 transition-colors"><Icons.X size={18}/></button>
                             </div>
-                            
                             <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
                                 {messages.map(msg => (
                                     <div key={msg.id} className={`flex gap-2 ${msg.uid === user.uid ? 'flex-row-reverse' : ''}`}>
                                         <img src={msg.photoURL || "https://via.placeholder.com/32"} className="w-6 h-6 rounded-full border border-slate-600" alt="" />
-                                        <div className={`rounded-2xl px-3 py-2 text-xs max-w-[75%] ${msg.uid === user.uid ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-slate-800 text-slate-200 rounded-tl-none'}`}>
+                                        <div className={`rounded-2xl px-3 py-2 text-xs max-w-[75%] ${msg.uid === user.uid ? 'bg-cyan-600 text-white rounded-tr-none' : 'bg-slate-800 text-slate-200 rounded-tl-none'}`}>
                                             <p className="font-bold text-[10px] opacity-70 mb-0.5">{msg.displayName}</p>
                                             {msg.text}
                                         </div>
@@ -251,35 +205,15 @@
                                 ))}
                                 <div ref={messagesEndRef} />
                             </div>
-
                             <form onSubmit={handleSend} className="p-2 border-t border-slate-700 bg-slate-800/50 flex gap-2">
-                                <input 
-                                    value={newMessage}
-                                    onChange={(e) => setNewMessage(e.target.value)}
-                                    className="flex-1 bg-slate-900 border border-slate-600 rounded-full px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-                                    placeholder="Mesaj yaz..."
-                                />
-                                <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-full transition">
-                                    <Icons.Send size={14} />
-                                </button>
+                                <input value={newMessage} onChange={(e) => setNewMessage(e.target.value)} className="flex-1 bg-slate-900 border border-slate-600 rounded-full px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500" placeholder="Mesaj yaz..." />
+                                <button type="submit" className="bg-cyan-600 hover:bg-cyan-500 text-white p-2 rounded-full transition"><Icons.Send size={14} /></button>
                             </form>
                         </div>
                     )}
-                    
-                    <button 
-                        onClick={() => setIsOpen(!isOpen)}
-                        className={`
-                            relative p-4 rounded-full shadow-lg shadow-blue-900/50 transition-all hover:scale-105 active:scale-95
-                            ${unreadCount > 0 ? 'bg-green-600 hover:bg-green-500' : 'bg-blue-600 hover:bg-blue-500'}
-                            text-white
-                        `}
-                    >
+                    <button onClick={() => setIsOpen(!isOpen)} className={`relative p-4 rounded-full shadow-lg shadow-cyan-900/50 transition-all hover:scale-105 active:scale-95 ${unreadCount > 0 ? 'bg-green-600 hover:bg-green-500' : 'bg-cyan-600 hover:bg-cyan-500'} text-white`}>
                         <Icons.MessageCircle size={24} />
-                        {unreadCount > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-slate-950 badge-bounce">
-                                {unreadCount}
-                            </span>
-                        )}
+                        {unreadCount > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-slate-950 badge-bounce">{unreadCount}</span>}
                     </button>
                 </div>
             );
@@ -287,33 +221,24 @@
 
         const LoginScreen = ({ onLogin }) => (
             <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 text-center animate-in">
-                <div className="w-20 h-20 bg-gradient-to-tr from-blue-600 to-cyan-500 rounded-3xl flex items-center justify-center text-white font-extrabold text-3xl shadow-2xl shadow-blue-900/50 transform rotate-6 mb-8">OC</div>
+                <div className="w-20 h-20 bg-gradient-to-tr from-cyan-600 to-blue-500 rounded-3xl flex items-center justify-center text-white font-extrabold text-3xl shadow-2xl shadow-cyan-900/50 transform rotate-6 mb-8">OC</div>
                 <h1 className="text-4xl font-black text-white mb-2 tracking-tight">Oray's Coaching</h1>
                 <p className="text-slate-400 mb-8 max-w-xs mx-auto">Elit atletler için kişiselleştirilmiş antrenman programı.</p>
                 <button onClick={onLogin} className="flex items-center gap-3 bg-white text-slate-900 px-8 py-4 rounded-xl font-bold hover:bg-slate-100 transition-all active:scale-95 shadow-xl">Google ile Giriş Yap</button>
             </div>
         );
 
-        // --- NEW STANDALONE MODAL COMPONENT (Fixes Hook Error) ---
-        const WorkoutModal = ({ 
-            selectedDate, 
-            workout = {}, 
-            isCoach, 
-            onClose, 
-            onSave, 
-            onDelete, 
-            onAutoSave,
-            hasWorkout 
-        }) => {
-            // Hooks are now at the top level of this component, which is correct.
+        const WorkoutModal = ({ selectedDate, workout = {}, isCoach, onClose, onSave, onDelete, onAutoSave, hasWorkout, onMarkRead }) => {
             const [localUserNote, setLocalUserNote] = useState(workout.userNote || "");
             const [saveStatus, setSaveStatus] = useState("idle");
             const [deleteConfirm, setDeleteConfirm] = useState(false);
 
-            // Update local state if the workout prop changes (e.g. from DB update)
+            useEffect(() => { setLocalUserNote(workout.userNote || ""); }, [workout.userNote]);
+            
+            // Mark as read when modal opens
             useEffect(() => {
-                setLocalUserNote(workout.userNote || "");
-            }, [workout.userNote]);
+                if (onMarkRead) onMarkRead();
+            }, []);
 
             const onUserNoteBlur = () => {
                 if (localUserNote !== (workout.userNote || "")) {
@@ -328,12 +253,8 @@
             const handleDeleteClick = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (deleteConfirm) {
-                    onDelete();
-                } else {
-                    setDeleteConfirm(true);
-                    setTimeout(() => setDeleteConfirm(false), 3000);
-                }
+                if (deleteConfirm) onDelete();
+                else { setDeleteConfirm(true); setTimeout(() => setDeleteConfirm(false), 3000); }
             };
 
             const canEditDetails = isCoach; 
@@ -345,17 +266,12 @@
                         <div className="bg-slate-800/50 p-4 border-b border-slate-700 flex justify-between items-center sticky top-0 z-10 backdrop-blur-sm">
                             <div className="flex items-center gap-3">
                                 {hasWorkout && isCoach && (
-                                    <button 
-                                        type="button" 
-                                        onClick={handleDeleteClick} 
-                                        className={`p-2 rounded-full transition-all border mr-1 group flex items-center gap-2 ${deleteConfirm ? "bg-red-600 text-white border-red-600 w-auto px-3" : "bg-red-500/10 hover:bg-red-500/20 text-red-500 border-red-500/20"}`} 
-                                        title="Sil"
-                                    >
+                                    <button type="button" onClick={handleDeleteClick} className={`p-2 rounded-full transition-all border mr-1 group flex items-center gap-2 ${deleteConfirm ? "bg-red-600 text-white border-red-600 w-auto px-3" : "bg-red-500/10 hover:bg-red-500/20 text-red-500 border-red-500/20"}`} title="Sil">
                                         <Icons.Trash2 size={18} /> {deleteConfirm && <span className="text-xs font-bold whitespace-nowrap">Sil?</span>}
                                     </button>
                                 )}
                                 <div>
-                                    <div className="flex items-center gap-2 text-blue-400 mb-0.5"><Icons.Calendar size={16} /><span className="text-xs font-bold tracking-widest uppercase opacity-80">{selectedDate.split('-')[0]}</span></div>
+                                    <div className="flex items-center gap-2 text-cyan-400 mb-0.5"><Icons.Calendar size={16} /><span className="text-xs font-bold tracking-widest uppercase opacity-80">{selectedDate.split('-')[0]}</span></div>
                                     <h2 className="text-xl font-bold text-white tracking-tight">{selectedDate.split('-').reverse().join('.')}</h2>
                                 </div>
                             </div>
@@ -377,14 +293,14 @@
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
                                             <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block">1. Antrenman</label>
-                                            <select name="type" defaultValue={workout.type || ""} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-white text-sm" disabled={!canEditDetails} required>
+                                            <select name="type" defaultValue={workout.type || ""} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none text-white text-sm" disabled={!canEditDetails} required>
                                                 <option value="" disabled>-- Seçiniz --</option>
                                                 {Object.entries(WORKOUT_TYPES).map(([key, val]) => (<option key={key} value={key}>{val.label}</option>))}
                                             </select>
                                         </div>
                                         <div>
                                             <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block">2. Antrenman</label>
-                                            <select name="type2" defaultValue={workout.type2 || "none"} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-white text-sm" disabled={!canEditDetails}>
+                                            <select name="type2" defaultValue={workout.type2 || "none"} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none text-white text-sm" disabled={!canEditDetails}>
                                                 <option value="none">-- Yok --</option>
                                                 {Object.entries(WORKOUT_TYPES).map(([key, val]) => (<option key={key} value={key}>{val.label}</option>))}
                                             </select>
@@ -392,20 +308,20 @@
                                     </div>
                                     <div>
                                         <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block">Başlık</label>
-                                        <input name="title" defaultValue={workout.title} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-white font-medium placeholder-slate-600" placeholder="Örn: Hafta sonu uzun koşusu" readOnly={!canEditDetails} />
+                                        <input name="title" defaultValue={workout.title} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none text-white font-medium placeholder-slate-600" placeholder="Örn: Hafta sonu uzun koşusu" readOnly={!canEditDetails} />
                                     </div>
                                     <div className="grid grid-cols-3 gap-3">
                                         <div>
                                             <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block">KM</label>
                                             <div className="relative">
-                                                <input name="km" defaultValue={workout.km} className="w-full p-3 pl-8 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-white text-sm" placeholder="0k" readOnly={!canEditDetails} />
+                                                <input name="km" defaultValue={workout.km} className="w-full p-3 pl-8 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none text-white text-sm" placeholder="0k" readOnly={!canEditDetails} />
                                                 <Icons.MapPin size={14} className="absolute left-2.5 top-3.5 text-slate-500" />
                                             </div>
                                         </div>
                                         <div>
                                             <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block">Zone</label>
                                             <div className="relative">
-                                                <select name="zone" defaultValue={workout.zone || ""} className="w-full p-3 pl-8 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-white text-sm appearance-none" disabled={!canEditDetails}>
+                                                <select name="zone" defaultValue={workout.zone || ""} className="w-full p-3 pl-8 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none text-white text-sm appearance-none" disabled={!canEditDetails}>
                                                     <option value="">--</option>
                                                     {[1, 2, 3, 4, 5].map(z => <option key={z} value={z}>{z}</option>)}
                                                 </select>
@@ -415,40 +331,30 @@
                                         <div>
                                             <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block">Elev.</label>
                                             <div className="relative">
-                                                <input name="elevation" defaultValue={workout.elevation} className="w-full p-3 pl-8 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-white text-sm" placeholder="0m" readOnly={!canEditDetails} />
+                                                <input name="elevation" defaultValue={workout.elevation} className="w-full p-3 pl-8 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none text-white text-sm" placeholder="0m" readOnly={!canEditDetails} />
                                                 <Icons.TrendingUp size={14} className="absolute left-2.5 top-3.5 text-slate-500" />
                                             </div>
                                         </div>
                                     </div>
                                     <div>
                                         <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block">Açıklama</label>
-                                        <textarea name="description" defaultValue={workout.description} rows={3} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-300 text-sm placeholder-slate-600" placeholder="Detaylar..." readOnly={!canEditDetails} />
+                                        <textarea name="description" defaultValue={workout.description} rows={3} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none text-slate-300 text-sm placeholder-slate-600" placeholder="Detaylar..." readOnly={!canEditDetails} />
                                     </div>
                                 </div>
 
                                 <div className="space-y-4 pt-2 border-t border-slate-800">
-                                    <div className="bg-blue-950/20 p-3 rounded-xl border border-blue-900/30">
-                                        <label className="flex items-center gap-2 text-[10px] font-bold text-blue-400 mb-2 uppercase"><Icons.Activity size={12} /> Coach Notu</label>
-                                        <textarea name="coachNote" defaultValue={workout.coachNote} className="w-full bg-transparent border-0 p-0 text-blue-100 text-sm focus:ring-0 placeholder-blue-500/30" placeholder="Notunuzu buraya girin..." readOnly={!canEditDetails} />
+                                    <div className="bg-cyan-950/20 p-3 rounded-xl border border-cyan-900/30">
+                                        <label className="flex items-center gap-2 text-[10px] font-bold text-cyan-400 mb-2 uppercase"><Icons.Activity size={12} /> Coach Notu</label>
+                                        <textarea name="coachNote" defaultValue={workout.coachNote} className="w-full bg-transparent border-0 p-0 text-cyan-100 text-sm focus:ring-0 placeholder-cyan-500/30" placeholder="Notunuzu buraya girin..." readOnly={!canEditDetails} />
                                     </div>
                                     <div className="bg-emerald-950/20 p-3 rounded-xl border border-emerald-900/30 relative">
                                         <div className="flex justify-between items-center mb-2">
                                             <label className="flex items-center gap-2 text-[10px] font-bold text-emerald-400 uppercase"><Icons.Heart size={12} /> Sporcu Notu</label>
-                                            {/* Atlet için auto-save indicator */}
                                             {!isCoach && saveStatus === 'saved' && <span className="text-[10px] text-emerald-400 flex items-center gap-1"><Icons.CheckCircle2 size={12} /> Kaydedildi</span>}
                                         </div>
-                                        
-                                        {/* Atletler için textarea (Auto-save) */}
                                         {!isCoach ? (
-                                            <textarea 
-                                                value={localUserNote}
-                                                onChange={(e) => setLocalUserNote(e.target.value)}
-                                                onBlur={onUserNoteBlur}
-                                                className="w-full bg-transparent border-0 p-0 text-emerald-100 text-sm focus:ring-0 placeholder-emerald-500/30" 
-                                                placeholder="Antrenman nasıl geçti? Notlarını buraya yaz..." 
-                                            />
+                                            <textarea value={localUserNote} onChange={(e) => setLocalUserNote(e.target.value)} onBlur={onUserNoteBlur} className="w-full bg-transparent border-0 p-0 text-emerald-100 text-sm focus:ring-0 placeholder-emerald-500/30" placeholder="Antrenman nasıl geçti? Notlarını buraya yaz..." />
                                         ) : (
-                                            /* Coach için read-only veya editable (Coach da düzenleyebilir ama kaydet butonuyla) */
                                             <textarea name="userNote" defaultValue={workout.userNote} className="w-full bg-transparent border-0 p-0 text-emerald-100 text-sm focus:ring-0 placeholder-emerald-500/30" placeholder="Sporcu notu..." />
                                         )}
                                     </div>
@@ -457,11 +363,10 @@
                             </form>
                         </div>
 
-                        {/* Sadece Coach için Footer (Kaydet Butonu) */}
                         {isCoach && (
                             <div className="p-4 border-t border-slate-800 bg-slate-900 flex gap-3 sticky bottom-0 z-10 pb-8 sm:pb-4">
                                 <button type="button" onClick={onClose} className="flex-1 py-3.5 rounded-xl font-medium text-slate-400 hover:bg-slate-800 transition-colors">Vazgeç</button>
-                                <button type="submit" form="workoutForm" className="flex-[2] py-3.5 rounded-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-900/40 active:scale-95 transition-all">Kaydet</button>
+                                <button type="submit" form="workoutForm" className="flex-[2] py-3.5 rounded-xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-900/40 active:scale-95 transition-all">Kaydet</button>
                             </div>
                         )}
                     </div>
@@ -476,12 +381,9 @@
             const [selectedDate, setSelectedDate] = useState(null);
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [isLoading, setIsLoading] = useState(true);
-            // deleteConfirm removed from App state as it's now in Modal
-            
             const [athleteList, setAthleteList] = useState([]);
             const [selectedAthleteId, setSelectedAthleteId] = useState(null);
 
-            // Admin Kontrolü
             const isCoach = user?.email === ADMIN_EMAIL;
 
             useEffect(() => {
@@ -508,9 +410,7 @@
             useEffect(() => {
                 if (isCoach) {
                     const unsubscribe = db.collection('users').onSnapshot(snapshot => {
-                        const users = snapshot.docs
-                            .map(doc => doc.data())
-                            .filter(u => u.email !== ADMIN_EMAIL);
+                        const users = snapshot.docs.map(doc => doc.data()).filter(u => u.email !== ADMIN_EMAIL);
                         setAthleteList(users);
                     });
                     return () => unsubscribe();
@@ -519,10 +419,7 @@
 
             useEffect(() => {
                 if (!selectedAthleteId) return;
-                
-                const unsubscribe = db.collection("workouts")
-                    .where("athleteUid", "==", selectedAthleteId)
-                    .onSnapshot((snapshot) => {
+                const unsubscribe = db.collection("workouts").where("athleteUid", "==", selectedAthleteId).onSnapshot((snapshot) => {
                         const data = {};
                         snapshot.forEach(doc => {
                             const workoutData = doc.data();
@@ -539,11 +436,7 @@
                 try { await auth.signInWithPopup(provider); } catch (error) { alert("Giriş başarısız: " + error.message); }
             };
 
-            const handleLogout = () => {
-                auth.signOut();
-                setSelectedAthleteId(null);
-                setWorkouts({});
-            };
+            const handleLogout = () => { auth.signOut(); setSelectedAthleteId(null); setWorkouts({}); };
 
             const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
             const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay(); 
@@ -559,14 +452,28 @@
                 setIsModalOpen(true);
             };
 
-            // Coach için Kaydetme (Manuel)
+            const handleMarkRead = async () => {
+                if (!selectedDate || !selectedAthleteId) return;
+                const docId = `${selectedAthleteId}_${selectedDate}`;
+                
+                // If I am Coach, I want to clear 'hasUnreadUserNote'
+                // If I am Athlete, I want to clear 'hasUnreadCoachNote'
+                const updateField = isCoach ? { hasUnreadUserNote: false } : { hasUnreadCoachNote: false };
+                
+                try {
+                    // Only update if document exists
+                    if (workouts[selectedDate]) {
+                        await db.collection("workouts").doc(docId).set(updateField, { merge: true });
+                    }
+                } catch (err) { console.error("Error marking read", err); }
+            };
+
             const handleCoachSave = async (e) => {
                 e.preventDefault();
                 if (!user || !selectedAthleteId) return;
-
                 const formData = new FormData(e.target);
                 const zoneVal = formData.get('zone');
-
+                
                 const updatedWorkout = {
                     athleteUid: selectedAthleteId,
                     title: formData.get('title'),
@@ -578,47 +485,31 @@
                     description: formData.get('description'),
                     status: formData.get('status'),
                     coachNote: formData.get('coachNote'),
-                    userNote: formData.get('userNote'), // Coach bunu değiştirebilir
+                    userNote: formData.get('userNote'),
                     updatedBy: user.email,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    hasUnreadCoachNote: true // Trigger notification for athlete
                 };
-
                 const docId = `${selectedAthleteId}_${selectedDate}`;
-
-                try {
-                    await db.collection("workouts").doc(docId).set(updatedWorkout, { merge: true });
-                    setIsModalOpen(false);
-                } catch (err) {
-                    console.error("Kaydetme hatası:", err);
-                    alert("Kaydedilemedi!");
-                }
+                try { await db.collection("workouts").doc(docId).set(updatedWorkout, { merge: true }); setIsModalOpen(false); } catch (err) { alert("Kaydedilemedi!"); }
             };
 
-            // Atlet için Otomatik Kayıt (onBlur ile)
             const handleAthleteNoteSave = async (noteText) => {
                 const workoutExists = workouts[selectedDate];
                 if (!workoutExists && !noteText.trim()) return;
-
                 const docId = `${selectedAthleteId}_${selectedDate}`;
-                
                 try {
                     const payload = {
                         userNote: noteText,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        hasUnreadUserNote: true // Trigger notification for coach
                     };
-
                     if (!workoutExists) {
                         payload.athleteUid = selectedAthleteId;
-                        payload.type = 'workout'; // Varsayılan tip
-                        payload.status = 'pending';
-                        payload.km = "";
-                        payload.title = "Serbest Antrenman";
+                        payload.type = 'workout'; payload.status = 'pending'; payload.km = ""; payload.title = "Serbest Antrenman";
                     }
-
                     await db.collection("workouts").doc(docId).set(payload, { merge: true });
-                } catch (err) {
-                    console.error("Otomatik kayıt hatası:", err);
-                }
+                } catch (err) { console.error("Otomatik kayıt hatası:", err); }
             };
 
             const handleDeleteWorkout = async () => {
@@ -626,7 +517,7 @@
                     const docId = `${selectedAthleteId}_${selectedDate}`;
                     await db.collection("workouts").doc(docId).delete();
                     setIsModalOpen(false);
-                } catch (err) { console.error("Silme hatası:", err); alert("Silinemedi!"); }
+                } catch (err) { alert("Silinemedi!"); }
             };
 
             if (isLoading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Yükleniyor...</div>;
@@ -638,27 +529,29 @@
                         <div className="max-w-2xl mx-auto">
                             <div className="flex justify-between items-center mb-8">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">OC</div>
-                                    <h1 className="text-2xl font-bold text-white">Coach Dashboard</h1>
+                                    <div className="w-12 h-12 bg-gradient-to-tr from-cyan-600 to-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">OC</div>
+                                    <div>
+                                        <h1 className="text-2xl font-bold text-white">Coach Dashboard</h1>
+                                        <p className="text-xs text-cyan-500 font-mono mt-1">{APP_VERSION}</p>
+                                    </div>
                                 </div>
                                 <button onClick={handleLogout} className="bg-slate-800 p-3 rounded-full text-slate-400 hover:text-white"><Icons.LogOut size={20} /></button>
                             </div>
-                            
                             <h2 className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-4">Atlet Listesi</h2>
                             <div className="grid gap-4">
                                 {athleteList.length === 0 ? (
                                     <div className="p-8 text-center border border-dashed border-slate-700 rounded-2xl text-slate-500">Henüz kayıtlı atlet yok.</div>
                                 ) : (
                                     athleteList.map(athlete => (
-                                        <div key={athlete.uid} onClick={() => setSelectedAthleteId(athlete.uid)} className="bg-slate-900 border border-slate-800 hover:border-blue-600 p-4 rounded-2xl flex items-center justify-between cursor-pointer transition-all hover:bg-slate-800 group">
+                                        <div key={athlete.uid} onClick={() => setSelectedAthleteId(athlete.uid)} className="bg-slate-900 border border-slate-800 hover:border-cyan-600 p-4 rounded-2xl flex items-center justify-between cursor-pointer transition-all hover:bg-slate-800 group">
                                             <div className="flex items-center gap-4">
-                                                <img src={athlete.photoURL || "https://via.placeholder.com/40"} className="w-12 h-12 rounded-full border-2 border-slate-700 group-hover:border-blue-500 transition-colors" alt=""/>
+                                                <img src={athlete.photoURL || "https://via.placeholder.com/40"} className="w-12 h-12 rounded-full border-2 border-slate-700 group-hover:border-cyan-500 transition-colors" alt=""/>
                                                 <div>
                                                     <h3 className="font-bold text-white text-lg">{athlete.displayName}</h3>
                                                     <p className="text-xs text-slate-500">{athlete.email}</p>
                                                 </div>
                                             </div>
-                                            <Icons.ChevronRight className="text-slate-600 group-hover:text-blue-500" />
+                                            <Icons.ChevronRight className="text-slate-600 group-hover:text-cyan-500" />
                                         </div>
                                     ))
                                 )}
@@ -679,7 +572,7 @@
                                             <Icons.ChevronLeft size={20} /> <span className="text-sm font-bold">Atletler</span>
                                         </button>
                                     ) : (
-                                        <div className="w-10 h-10 bg-gradient-to-tr from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center text-white font-extrabold shadow-lg shadow-blue-900/50 transform rotate-3">OC</div>
+                                        <div className="w-10 h-10 bg-gradient-to-tr from-cyan-600 to-blue-500 rounded-xl flex items-center justify-center text-white font-extrabold shadow-lg shadow-cyan-900/50 transform rotate-3">OC</div>
                                     )}
                                     
                                     <div>
@@ -721,6 +614,12 @@
                                 const type2 = type2Key ? WORKOUT_TYPES[type2Key] : null;
                                 const status = workout ? (workout.status || 'pending') : null;
                                 
+                                // Notification Check
+                                const showNotification = workout && (
+                                    (isCoach && workout.hasUnreadUserNote) || 
+                                    (!isCoach && workout.hasUnreadCoachNote)
+                                );
+
                                 let containerBgClass = 'bg-slate-900'; 
                                 let containerBorderClass = 'border-slate-800 hover:border-slate-700'; 
 
@@ -733,7 +632,15 @@
                                 }
 
                                 return (
-                                    <div key={day} onClick={() => handleDateClick(day)} className={`relative min-h-[90px] sm:min-h-[100px] rounded-xl transition-all duration-200 cursor-pointer active:scale-95 flex flex-col overflow-hidden group ${containerBgClass} ${containerBorderClass} ${isToday ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-950 z-10' : ''}`}>
+                                    <div key={day} onClick={() => handleDateClick(day)} className={`relative min-h-[90px] sm:min-h-[100px] rounded-xl transition-all duration-200 cursor-pointer active:scale-95 flex flex-col overflow-hidden group ${containerBgClass} ${containerBorderClass} ${isToday ? 'ring-2 ring-cyan-500 ring-offset-2 ring-offset-slate-950 z-10' : ''}`}>
+                                        {/* Notification Indicator */}
+                                        {showNotification && (
+                                            <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full z-20 shadow-lg shadow-red-500/50 animate-ping-slow"></div>
+                                        )}
+                                        {showNotification && (
+                                            <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full z-20 border border-slate-900"></div>
+                                        )}
+
                                         {workout && type2 && (
                                             <>
                                                 <div className={`absolute inset-0 w-full h-full z-0 ${type1.bgRaw} opacity-40 [clip-path:polygon(0_0,100%_0,0_100%)]`}></div>
@@ -741,7 +648,7 @@
                                             </>
                                         )}
                                         <div className="relative z-10 flex justify-between items-start mb-1 p-1.5 pb-0">
-                                            <span className={`text-xs font-bold ${isToday ? 'text-blue-400' : 'text-slate-300/80 drop-shadow-md'}`}>{day}</span>
+                                            <span className={`text-xs font-bold ${isToday ? 'text-cyan-400' : 'text-slate-300/80 drop-shadow-md'}`}>{day}</span>
                                             {workout && (<div className="flex gap-1 opacity-90 drop-shadow-md">{type1.icon}{type2 && type2.icon}</div>)}
                                         </div>
                                         {workout ? (
@@ -772,6 +679,7 @@
                             onDelete={handleDeleteWorkout}
                             onAutoSave={handleAthleteNoteSave}
                             hasWorkout={!!workouts[selectedDate]}
+                            onMarkRead={handleMarkRead}
                         />
                     )}
                     <ChatWidget 
@@ -779,6 +687,7 @@
                         chatRoomId={selectedAthleteId} 
                         targetName={isCoach ? (athleteList.find(a => a.uid === selectedAthleteId)?.displayName || 'Atlet') : "Coach"}
                     />
+                    <div className="fixed bottom-4 left-4 text-[10px] text-slate-600 font-mono">{APP_VERSION}</div>
                 </div>
             );
         };
