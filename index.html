@@ -2,7 +2,6 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <!-- Zoom engelleme ve tam ekran modları eklendi -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Oray's Coaching</title>
     
@@ -31,7 +30,6 @@
         .animate-in { animation: fadeIn 0.3s ease-out; }
         .slide-in { animation: slideUp 0.3s ease-out; }
         
-        /* Auto-save indicator animation */
         @keyframes pulse-cyan {
             0% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.7); }
             70% { box-shadow: 0 0 0 6px rgba(34, 211, 238, 0); }
@@ -39,14 +37,12 @@
         }
         .saving-pulse { animation: pulse-cyan 1s infinite; }
         
-        /* Chat badge animation */
         @keyframes bounce-small {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-3px); }
         }
         .badge-bounce { animation: bounce-small 2s infinite; }
 
-        /* Notification Dot Pulse */
         @keyframes ping-slow {
             75%, 100% { transform: scale(2); opacity: 0; }
         }
@@ -78,7 +74,7 @@
         const db = firebase.firestore();
 
         // --- SOUNDS ---
-        const NOTIFICATION_SOUND = "data:audio/mp3;base64,//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq";
+        const NOTIFICATION_SOUND = "data:audio/mp3;base64,//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq";
 
         // --- ICONS SYSTEM ---
         const { useState, useEffect, useRef } = React;
@@ -92,9 +88,7 @@
         const Icons = {
             ChevronLeft: (props) => <IconBase {...props}><path d="m15 18-6-6 6-6"/></IconBase>,
             ChevronRight: (props) => <IconBase {...props}><path d="m9 18 6-6-6-6"/></IconBase>,
-            // X ikonunu daha düzgün bir çarpı ile değiştirdim
             X: (props) => <IconBase {...props}><path d="M18 6 6 18"/><path d="m6 6 18 18"/></IconBase>,
-            // Alternatif Circle X
             XCircle: (props) => <IconBase {...props}><circle cx="12" cy="12" r="10" /><path d="m15 9-6 6"/><path d="m9 9 6 6"/></IconBase>,
             Activity: (props) => <IconBase {...props}><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></IconBase>,
             TrendingUp: (props) => <IconBase {...props}><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></IconBase>,
@@ -113,7 +107,8 @@
             User: (props) => <IconBase {...props}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconBase>,
             Users: (props) => <IconBase {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></IconBase>,
             CheckCircle2: (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></IconBase>,
-            Bell: (props) => <IconBase {...props}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></IconBase>
+            Bell: (props) => <IconBase {...props}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></IconBase>,
+            FileText: (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></IconBase>
         };
 
         const WORKOUT_TYPES = {
@@ -144,39 +139,51 @@
 
         // --- COMPONENTS ---
 
-        const ChatWidget = ({ user, chatRoomId, targetName }) => {
+        const ChatWidget = ({ user, chatRoomId, targetName, hasUnread, onOpenChat }) => {
             if (!chatRoomId) return null;
 
             const [isOpen, setIsOpen] = useState(false);
             const [messages, setMessages] = useState([]);
             const [newMessage, setNewMessage] = useState("");
-            const [unreadCount, setUnreadCount] = useState(0);
             const messagesEndRef = useRef(null);
-            const lastMessageCount = useRef(0);
-            const isFirstLoad = useRef(true);
+            
+            // Local state to play sound if new message arrives while app is open
+            const [msgCount, setMsgCount] = useState(0);
+            const firstLoad = useRef(true);
 
             const playSound = () => {
                 const audio = new Audio(NOTIFICATION_SOUND);
                 audio.play().catch(e => console.log("Audio play failed"));
             };
 
+            // Listen to messages
             useEffect(() => {
                 if (!chatRoomId) return;
                 const unsubscribe = db.collection("chats").doc(chatRoomId).collection("messages").orderBy("createdAt", "asc").onSnapshot((snapshot) => {
                     const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     setMessages(msgs);
-                    if (isFirstLoad.current) { lastMessageCount.current = msgs.length; isFirstLoad.current = false; }
-                    else if (msgs.length > lastMessageCount.current) {
-                        const lastMsg = msgs[msgs.length - 1];
-                        if (lastMsg.uid !== user.uid) { playSound(); if (!isOpen) setUnreadCount(prev => prev + 1); }
-                        lastMessageCount.current = msgs.length;
+                    
+                    if (!firstLoad.current && msgs.length > msgCount) {
+                        const last = msgs[msgs.length - 1];
+                        if (last.uid !== user.uid) playSound();
                     }
+                    setMsgCount(msgs.length);
+                    firstLoad.current = false;
+
                     if (isOpen) setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
                 });
                 return () => unsubscribe();
             }, [chatRoomId, user.uid, isOpen]);
 
-            useEffect(() => { if (isOpen) { setUnreadCount(0); setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100); } }, [isOpen]);
+            // Handle Open/Close and Clearing Flags
+            const toggleChat = () => {
+                const newState = !isOpen;
+                setIsOpen(newState);
+                if (newState) {
+                    onOpenChat(); // Clear unread flags in DB
+                    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+                }
+            };
 
             const handleSend = async (e) => {
                 e.preventDefault();
@@ -185,6 +192,17 @@
                     await db.collection("chats").doc(chatRoomId).collection("messages").add({
                         text: newMessage, uid: user.uid, displayName: user.displayName || "User", photoURL: user.photoURL, createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
+                    
+                    // Set Notification Flags based on sender
+                    const isCoach = user.email === ADMIN_EMAIL;
+                    if (isCoach) {
+                        // Coach sending -> Flag for Athlete
+                        await db.collection("users").doc(chatRoomId).set({ hasUnreadCoachMessages: true }, { merge: true });
+                    } else {
+                        // Athlete sending -> Flag for Coach
+                        await db.collection("users").doc(user.uid).set({ hasUnreadMessages: true }, { merge: true });
+                    }
+
                     setNewMessage("");
                 } catch (error) { console.error("Mesaj hatası:", error); }
             };
@@ -192,12 +210,10 @@
             return (
                 <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end">
                     {isOpen && (
-                        // MOBİLDE TAM EKRAN (fixed inset-0), MASAÜSTÜNDE KUTU (sm:absolute ...)
                         <div className="fixed inset-0 z-[100] w-full h-full sm:absolute sm:inset-auto sm:bottom-20 sm:right-0 sm:w-80 sm:h-96 bg-slate-900 border-0 sm:border border-slate-700 sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden slide-in">
                             <div className="bg-slate-800 p-4 sm:p-3 border-b border-slate-700 flex justify-between items-center">
                                 <h3 className="text-white font-bold text-sm flex items-center gap-2"><Icons.MessageCircle size={16} className="text-cyan-400"/> {targetName}</h3>
-                                {/* Yeni kapatma ikonu: XCircle */}
-                                <button onClick={() => setIsOpen(false)} className="text-slate-400 hover:text-white p-2 rounded-full hover:bg-slate-700 transition-colors"><Icons.XCircle size={24}/></button>
+                                <button onClick={toggleChat} className="text-slate-400 hover:text-white p-2 rounded-full hover:bg-slate-700 transition-colors"><Icons.XCircle size={24}/></button>
                             </div>
                             <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar bg-slate-900">
                                 {messages.map(msg => (
@@ -212,20 +228,14 @@
                                 <div ref={messagesEndRef} />
                             </div>
                             <form onSubmit={handleSend} className="p-3 sm:p-2 border-t border-slate-700 bg-slate-800/50 flex gap-2 pb-safe">
-                                <input 
-                                    value={newMessage}
-                                    onChange={(e) => setNewMessage(e.target.value)}
-                                    // text-base mobil için, text-xs masaüstü için
-                                    className="flex-1 bg-slate-900 border border-slate-600 rounded-full px-4 py-3 sm:px-3 sm:py-2 text-base sm:text-xs text-white focus:outline-none focus:border-cyan-500"
-                                    placeholder="Mesaj yaz..."
-                                />
+                                <input value={newMessage} onChange={(e) => setNewMessage(e.target.value)} className="flex-1 bg-slate-900 border border-slate-600 rounded-full px-4 py-3 sm:px-3 sm:py-2 text-base sm:text-xs text-white focus:outline-none focus:border-cyan-500" placeholder="Mesaj yaz..." />
                                 <button type="submit" className="bg-cyan-600 hover:bg-cyan-500 text-white p-3 sm:p-2 rounded-full transition"><Icons.Send size={18} /></button>
                             </form>
                         </div>
                     )}
-                    <button onClick={() => setIsOpen(!isOpen)} className={`relative p-4 rounded-full shadow-lg shadow-cyan-900/50 transition-all hover:scale-105 active:scale-95 ${unreadCount > 0 ? 'bg-green-600 hover:bg-green-500' : 'bg-cyan-600 hover:bg-cyan-500'} text-white`}>
+                    <button onClick={toggleChat} className={`relative p-4 rounded-full shadow-lg shadow-cyan-900/50 transition-all hover:scale-105 active:scale-95 ${hasUnread ? 'bg-green-600 hover:bg-green-500' : 'bg-cyan-600 hover:bg-cyan-500'} text-white`}>
                         <Icons.MessageCircle size={24} />
-                        {unreadCount > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-slate-950 badge-bounce">{unreadCount}</span>}
+                        {hasUnread && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-slate-950 badge-bounce">!</span>}
                     </button>
                 </div>
             );
@@ -247,10 +257,7 @@
 
             useEffect(() => { setLocalUserNote(workout.userNote || ""); }, [workout.userNote]);
             
-            // Mark as read when modal opens
-            useEffect(() => {
-                if (onMarkRead) onMarkRead();
-            }, []);
+            useEffect(() => { if (onMarkRead) onMarkRead(); }, []);
 
             const onUserNoteBlur = () => {
                 if (localUserNote !== (workout.userNote || "")) {
@@ -263,10 +270,8 @@
             };
 
             const handleDeleteClick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (deleteConfirm) onDelete();
-                else { setDeleteConfirm(true); setTimeout(() => setDeleteConfirm(false), 3000); }
+                e.preventDefault(); e.stopPropagation();
+                if (deleteConfirm) onDelete(); else { setDeleteConfirm(true); setTimeout(() => setDeleteConfirm(false), 3000); }
             };
 
             const canEditDetails = isCoach; 
@@ -287,7 +292,6 @@
                                     <h2 className="text-xl font-bold text-white tracking-tight">{selectedDate.split('-').reverse().join('.')}</h2>
                                 </div>
                             </div>
-                            {/* Modal Kapatma Tuşunu da düzelttim (XCircle) */}
                             <button type="button" onClick={onClose} className="text-slate-400 hover:text-white p-2 transition-colors"><Icons.XCircle size={28} /></button>
                         </div>
 
@@ -396,6 +400,9 @@
             const [isLoading, setIsLoading] = useState(true);
             const [athleteList, setAthleteList] = useState([]);
             const [selectedAthleteId, setSelectedAthleteId] = useState(null);
+            
+            // Current User Info (Notifications for Athlete)
+            const [currentUserData, setCurrentUserData] = useState({});
 
             const isCoach = user?.email === ADMIN_EMAIL;
 
@@ -414,6 +421,11 @@
                         if (currentUser.email !== ADMIN_EMAIL) {
                             setSelectedAthleteId(currentUser.uid);
                         }
+                        
+                        // Listen to current user data for flags
+                        db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
+                            if (doc.exists) setCurrentUserData(doc.data());
+                        });
                     }
                     setIsLoading(false);
                 });
@@ -468,13 +480,8 @@
             const handleMarkRead = async () => {
                 if (!selectedDate || !selectedAthleteId) return;
                 const docId = `${selectedAthleteId}_${selectedDate}`;
-                
-                // If I am Coach, I want to clear 'hasUnreadUserNote'
-                // If I am Athlete, I want to clear 'hasUnreadCoachNote'
                 const updateField = isCoach ? { hasUnreadUserNote: false } : { hasUnreadCoachNote: false };
-                
                 try {
-                    // Only update if document exists
                     if (workouts[selectedDate]) {
                         await db.collection("workouts").doc(docId).set(updateField, { merge: true });
                     }
@@ -501,7 +508,7 @@
                     userNote: formData.get('userNote'),
                     updatedBy: user.email,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    hasUnreadCoachNote: true // Trigger notification for athlete
+                    hasUnreadCoachNote: true 
                 };
                 const docId = `${selectedAthleteId}_${selectedDate}`;
                 try { await db.collection("workouts").doc(docId).set(updatedWorkout, { merge: true }); setIsModalOpen(false); } catch (err) { alert("Kaydedilemedi!"); }
@@ -515,13 +522,16 @@
                     const payload = {
                         userNote: noteText,
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        hasUnreadUserNote: true // Trigger notification for coach
+                        hasUnreadUserNote: true 
                     };
                     if (!workoutExists) {
                         payload.athleteUid = selectedAthleteId;
                         payload.type = 'workout'; payload.status = 'pending'; payload.km = ""; payload.title = "Serbest Antrenman";
                     }
                     await db.collection("workouts").doc(docId).set(payload, { merge: true });
+                    
+                    // Also flag user on Dashboard for Coach
+                    await db.collection("users").doc(selectedAthleteId).set({ hasUnreadNotes: true }, { merge: true });
                 } catch (err) { console.error("Otomatik kayıt hatası:", err); }
             };
 
@@ -531,6 +541,22 @@
                     await db.collection("workouts").doc(docId).delete();
                     setIsModalOpen(false);
                 } catch (err) { alert("Silinemedi!"); }
+            };
+            
+            // Clear unread notes flag when coach enters athlete
+            const handleSelectAthlete = (uid) => {
+                setSelectedAthleteId(uid);
+                // Clear note flag
+                db.collection("users").doc(uid).set({ hasUnreadNotes: false }, { merge: true });
+            };
+            
+            // Clear unread message flag when opening chat
+            const handleOpenChat = () => {
+                const targetId = isCoach ? selectedAthleteId : user.uid;
+                if (targetId) {
+                    const field = isCoach ? { hasUnreadMessages: false } : { hasUnreadCoachMessages: false };
+                    db.collection("users").doc(targetId).set(field, { merge: true });
+                }
             };
 
             if (isLoading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Yükleniyor...</div>;
@@ -556,7 +582,7 @@
                                     <div className="p-8 text-center border border-dashed border-slate-700 rounded-2xl text-slate-500">Henüz kayıtlı atlet yok.</div>
                                 ) : (
                                     athleteList.map(athlete => (
-                                        <div key={athlete.uid} onClick={() => setSelectedAthleteId(athlete.uid)} className="bg-slate-900 border border-slate-800 hover:border-cyan-600 p-4 rounded-2xl flex items-center justify-between cursor-pointer transition-all hover:bg-slate-800 group">
+                                        <div key={athlete.uid} onClick={() => handleSelectAthlete(athlete.uid)} className="bg-slate-900 border border-slate-800 hover:border-cyan-600 p-4 rounded-2xl flex items-center justify-between cursor-pointer transition-all hover:bg-slate-800 group relative">
                                             <div className="flex items-center gap-4">
                                                 <img src={athlete.photoURL || "https://via.placeholder.com/40"} className="w-12 h-12 rounded-full border-2 border-slate-700 group-hover:border-cyan-500 transition-colors" alt=""/>
                                                 <div>
@@ -564,7 +590,12 @@
                                                     <p className="text-xs text-slate-500">{athlete.email}</p>
                                                 </div>
                                             </div>
-                                            <Icons.ChevronRight className="text-slate-600 group-hover:text-cyan-500" />
+                                            <div className="flex items-center gap-3">
+                                                {/* Dashboard Indicators */}
+                                                {athlete.hasUnreadNotes && <Icons.FileText className="text-orange-500 animate-pulse" size={20} />}
+                                                {athlete.hasUnreadMessages && <Icons.MessageCircle className="text-green-500 animate-pulse" size={20} />}
+                                                <Icons.ChevronRight className="text-slate-600 group-hover:text-cyan-500" />
+                                            </div>
                                         </div>
                                     ))
                                 )}
@@ -573,6 +604,16 @@
                     </div>
                 );
             }
+            
+            // Determine if current view has unread messages for ChatWidget
+            const targetUserForChat = isCoach 
+                ? athleteList.find(a => a.uid === selectedAthleteId) 
+                : currentUserData;
+            
+            // If coach, check selected athlete's flag. If athlete, check own flag.
+            const hasUnreadChat = isCoach 
+                ? targetUserForChat?.hasUnreadMessages 
+                : targetUserForChat?.hasUnreadCoachMessages;
 
             return (
                 <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-blue-500/30 pb-24 animate-in">
@@ -627,7 +668,6 @@
                                 const type2 = type2Key ? WORKOUT_TYPES[type2Key] : null;
                                 const status = workout ? (workout.status || 'pending') : null;
                                 
-                                // Notification Check
                                 const showNotification = workout && (
                                     (isCoach && workout.hasUnreadUserNote) || 
                                     (!isCoach && workout.hasUnreadCoachNote)
@@ -646,7 +686,6 @@
 
                                 return (
                                     <div key={day} onClick={() => handleDateClick(day)} className={`relative min-h-[90px] sm:min-h-[100px] rounded-xl transition-all duration-200 cursor-pointer active:scale-95 flex flex-col overflow-hidden group ${containerBgClass} ${containerBorderClass} ${isToday ? 'ring-2 ring-cyan-500 ring-offset-2 ring-offset-slate-950 z-10' : ''}`}>
-                                        {/* Notification Indicator */}
                                         {showNotification && (
                                             <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full z-20 shadow-lg shadow-red-500/50 animate-ping-slow"></div>
                                         )}
@@ -699,6 +738,8 @@
                         user={user} 
                         chatRoomId={selectedAthleteId} 
                         targetName={isCoach ? (athleteList.find(a => a.uid === selectedAthleteId)?.displayName || 'Atlet') : "Coach"}
+                        hasUnread={hasUnreadChat}
+                        onOpenChat={handleOpenChat}
                     />
                     <div className="fixed bottom-4 left-4 text-[10px] text-slate-600 font-mono">{APP_VERSION}</div>
                 </div>
