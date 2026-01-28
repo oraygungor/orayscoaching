@@ -105,35 +105,51 @@
 
         const ZONE_COLORS = { 1: "bg-slate-600 text-slate-200", 2: "bg-blue-600 text-white", 3: "bg-green-600 text-white", 4: "bg-orange-600 text-white", 5: "bg-red-600 text-white" };
 
-        const ChatWidget = ({ user }) => {
+        // --- COMPONENTS ---
+
+        const ChatWidget = ({ user, chatRoomId, targetName }) => {
+            if (!chatRoomId) return null; // Chat odası yoksa (örn: Coach dashboard'da) gösterme
+
             const [isOpen, setIsOpen] = useState(false);
             const [messages, setMessages] = useState([]);
             const [newMessage, setNewMessage] = useState("");
             const messagesEndRef = useRef(null);
 
             useEffect(() => {
-                if (!isOpen) return;
-                const unsubscribe = db.collection("messages").orderBy("createdAt", "asc").onSnapshot((snapshot) => {
-                    const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    setMessages(msgs);
-                    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-                });
+                if (!isOpen || !chatRoomId) return;
+                
+                // Mesajlar artık global "messages" yerine "chats/{chatRoomId}/messages" altında
+                const unsubscribe = db.collection("chats")
+                    .doc(chatRoomId)
+                    .collection("messages")
+                    .orderBy("createdAt", "asc")
+                    .onSnapshot((snapshot) => {
+                        const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        setMessages(msgs);
+                        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+                    });
                 return () => unsubscribe();
-            }, [isOpen]);
+            }, [isOpen, chatRoomId]);
 
             const handleSend = async (e) => {
                 e.preventDefault();
-                if (!newMessage.trim()) return;
+                if (!newMessage.trim() || !chatRoomId) return;
+                
                 try {
-                    await db.collection("messages").add({
-                        text: newMessage,
-                        uid: user.uid,
-                        displayName: user.displayName || "User",
-                        photoURL: user.photoURL,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
+                    await db.collection("chats")
+                        .doc(chatRoomId)
+                        .collection("messages")
+                        .add({
+                            text: newMessage,
+                            uid: user.uid,
+                            displayName: user.displayName || "User",
+                            photoURL: user.photoURL,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
                     setNewMessage("");
-                } catch (error) { console.error("Mesaj hatası:", error); }
+                } catch (error) {
+                    console.error("Mesaj hatası:", error);
+                }
             };
 
             return (
@@ -141,9 +157,12 @@
                     {isOpen && (
                         <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-80 h-96 mb-4 flex flex-col overflow-hidden slide-in">
                             <div className="bg-slate-800 p-3 border-b border-slate-700 flex justify-between items-center">
-                                <h3 className="text-white font-bold text-sm flex items-center gap-2"><Icons.MessageCircle size={16} className="text-blue-400"/> Takım Sohbeti</h3>
+                                <h3 className="text-white font-bold text-sm flex items-center gap-2">
+                                    <Icons.MessageCircle size={16} className="text-blue-400"/> {targetName}
+                                </h3>
                                 <button onClick={() => setIsOpen(false)} className="text-slate-400 hover:text-white"><Icons.X size={16}/></button>
                             </div>
+                            
                             <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
                                 {messages.map(msg => (
                                     <div key={msg.id} className={`flex gap-2 ${msg.uid === user.uid ? 'flex-row-reverse' : ''}`}>
@@ -156,13 +175,27 @@
                                 ))}
                                 <div ref={messagesEndRef} />
                             </div>
+
                             <form onSubmit={handleSend} className="p-2 border-t border-slate-700 bg-slate-800/50 flex gap-2">
-                                <input value={newMessage} onChange={(e) => setNewMessage(e.target.value)} className="flex-1 bg-slate-900 border border-slate-600 rounded-full px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500" placeholder="Mesaj yaz..." />
-                                <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-full transition"><Icons.Send size={14} /></button>
+                                <input 
+                                    value={newMessage}
+                                    onChange={(e) => setNewMessage(e.target.value)}
+                                    className="flex-1 bg-slate-900 border border-slate-600 rounded-full px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                                    placeholder="Mesaj yaz..."
+                                />
+                                <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-full transition">
+                                    <Icons.Send size={14} />
+                                </button>
                             </form>
                         </div>
                     )}
-                    <button onClick={() => setIsOpen(!isOpen)} className="bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-full shadow-lg shadow-blue-900/50 transition-all hover:scale-105 active:scale-95"><Icons.MessageCircle size={24} /></button>
+                    
+                    <button 
+                        onClick={() => setIsOpen(!isOpen)}
+                        className="bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-full shadow-lg shadow-blue-900/50 transition-all hover:scale-105 active:scale-95"
+                    >
+                        <Icons.MessageCircle size={24} />
+                    </button>
                 </div>
             );
         };
@@ -485,7 +518,7 @@
                                 )}
                             </div>
                         </div>
-                        <ChatWidget user={user} />
+                        {/* Coach için Dashboard'da sohbet yok, atlet seçince gelecek */}
                     </div>
                 );
             }
@@ -588,7 +621,11 @@
                         </div>
                     </div>
                     {isModalOpen && renderModal()}
-                    <ChatWidget user={user} />
+                    <ChatWidget 
+                        user={user} 
+                        chatRoomId={selectedAthleteId} 
+                        targetName={isCoach ? (athleteList.find(a => a.uid === selectedAthleteId)?.displayName || 'Atlet') : "Coach"}
+                    />
                 </div>
             );
         };
