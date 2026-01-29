@@ -49,7 +49,7 @@
     <script type="text/babel">
         // --- CONFIGURATION ---
         const ADMIN_EMAIL = "oray.gungor@gmail.com";
-        const APP_VERSION = "v0.14";
+        const APP_VERSION = "v0.15";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCu-H_z8dwFV7tc4uS1o79SDD-Cm7Hvei4",
@@ -293,7 +293,6 @@
                 const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
                     setUser(currentUser);
                     if (currentUser) {
-                        // Ensure user record exists
                         await db.collection('users').doc(currentUser.uid).set({
                             uid: currentUser.uid,
                             email: currentUser.email,
@@ -313,7 +312,6 @@
 
             useEffect(() => {
                 if (isCoach) {
-                    // Coach sees all athletes
                     const unsubscribe = db.collection('users').onSnapshot(snapshot => {
                         const users = snapshot.docs.map(doc => doc.data()).filter(u => u.email !== ADMIN_EMAIL);
                         setAthleteList(users);
@@ -324,7 +322,6 @@
 
             useEffect(() => {
                 if (!selectedAthleteId) return;
-                // Listen to selected athlete's workouts
                 const unsubscribe = db.collection("workouts").where("athleteUid", "==", selectedAthleteId).onSnapshot((snapshot) => {
                         const data = {};
                         snapshot.forEach(doc => {
@@ -358,7 +355,6 @@
                 setIsModalOpen(true);
             };
 
-            // Called when Modal Opens to clear notification flags
             const handleMarkRead = async () => {
                 if (!selectedDate || !selectedAthleteId) return;
                 const docId = `${selectedAthleteId}_${selectedDate}`;
@@ -366,7 +362,6 @@
                 const workout = workouts[selectedDate];
                 if (!workout) return;
 
-                // Coach clears 'hasUnreadUserNote' AND decrements athlete's unread counter
                 if (isCoach && workout.hasUnreadUserNote) {
                     try {
                         const batch = db.batch();
@@ -374,13 +369,16 @@
                         const userRef = db.collection("users").doc(selectedAthleteId);
 
                         batch.set(workoutRef, { hasUnreadUserNote: false }, { merge: true });
-                        batch.update(userRef, { unreadNoteCount: firebase.firestore.FieldValue.increment(-1) });
+                        // Prevent negative count
+                        const currentCount = athleteList.find(a => a.uid === selectedAthleteId)?.unreadNoteCount || 0;
+                        if (currentCount > 0) {
+                            batch.set(userRef, { unreadNoteCount: firebase.firestore.FieldValue.increment(-1) }, { merge: true });
+                        }
                         
                         await batch.commit();
                     } catch (err) { console.error("Error clearing coach notification", err); }
                 }
                 
-                // Athlete clears 'hasUnreadCoachNote' (no counter needed for athlete view usually)
                 if (!isCoach && workout.hasUnreadCoachNote) {
                     try {
                         await db.collection("workouts").doc(docId).set({ hasUnreadCoachNote: false }, { merge: true });
@@ -408,7 +406,7 @@
                     userNote: formData.get('userNote'),
                     updatedBy: user.email,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    hasUnreadCoachNote: true // Notify athlete
+                    hasUnreadCoachNote: true 
                 };
                 const docId = `${selectedAthleteId}_${selectedDate}`;
                 try { await db.collection("workouts").doc(docId).set(updatedWorkout, { merge: true }); setIsModalOpen(false); } catch (err) { alert("Kaydedilemedi!"); }
@@ -426,16 +424,11 @@
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     };
 
-                    // Only notify/increment if it wasn't already unread
                     if (!workoutExists || !workoutExists.hasUnreadUserNote) {
                         payload.hasUnreadUserNote = true;
-                        
-                        // Increment counter on User Doc for Coach Dashboard
+                        // Use set with merge for safety (creates field if missing)
                         const userRef = db.collection("users").doc(selectedAthleteId);
-                        userRef.update({ unreadNoteCount: firebase.firestore.FieldValue.increment(1) }).catch(err => {
-                            // If field doesn't exist, set it
-                            userRef.set({ unreadNoteCount: 1 }, { merge: true });
-                        });
+                        userRef.set({ unreadNoteCount: firebase.firestore.FieldValue.increment(1) }, { merge: true });
                     }
 
                     if (!workoutExists) {
@@ -457,7 +450,6 @@
             
             const handleSelectAthlete = (uid) => {
                 setSelectedAthleteId(uid);
-                // Do NOT clear count here. Count clears as coach opens specific workouts.
             };
 
             if (isLoading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Yükleniyor...</div>;
@@ -492,9 +484,8 @@
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                {/* Note Counter Badge */}
-                                                {athlete.unreadNoteCount > 0 && (
-                                                    <div className="flex items-center justify-center w-6 h-6 bg-orange-500 text-white text-xs font-bold rounded-full animate-bounce shadow-lg shadow-orange-900/50 border border-slate-900">
+                                                {(athlete.unreadNoteCount || 0) > 0 && (
+                                                    <div className="flex items-center justify-center w-7 h-7 bg-orange-500 text-white text-xs font-bold rounded-full animate-bounce shadow-lg shadow-orange-900/50 border-2 border-slate-900">
                                                         {athlete.unreadNoteCount}
                                                     </div>
                                                 )}
