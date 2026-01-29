@@ -49,7 +49,7 @@
     <script type="text/babel">
         // --- CONFIGURATION ---
         const ADMIN_EMAIL = "oray.gungor@gmail.com";
-        const APP_VERSION = "v0.15";
+        const APP_VERSION = "v0.16";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCu-H_z8dwFV7tc4uS1o79SDD-Cm7Hvei4",
@@ -351,6 +351,14 @@
 
             const handleDateClick = (day) => {
                 const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                
+                // --- YENİ EKLENEN KISIM: SPORCU KISITLAMASI ---
+                // Eğer kullanıcı Coach değilse (yani Sporcuysa) VE tıklanan günde antrenman yoksa
+                if (!isCoach && !workouts[dateStr]) {
+                    // Hiçbir şey yapma, modalı açma
+                    return; 
+                }
+                
                 setSelectedDate(dateStr);
                 setIsModalOpen(true);
             };
@@ -598,7 +606,10 @@
                                             </div>
                                         ) : (
                                             <div className="flex-1 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 border border-slate-700"><span className="text-sm font-light leading-none mb-0.5">+</span></div>
+                                                {/* Sadece Coach boş güne tıklayıp ekleme yapabilir sembolü */}
+                                                {isCoach && (
+                                                    <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 border border-slate-700"><span className="text-sm font-light leading-none mb-0.5">+</span></div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
