@@ -49,7 +49,7 @@
     <script type="text/babel">
         // --- CONFIGURATION ---
         const ADMIN_EMAIL = "oray.gungor@gmail.com";
-        const APP_VERSION = "v0.13";
+        const APP_VERSION = "v0.14";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCu-H_z8dwFV7tc4uS1o79SDD-Cm7Hvei4",
@@ -80,6 +80,7 @@
             ChevronLeft: (props) => <IconBase {...props}><path d="m15 18-6-6 6-6"/></IconBase>,
             ChevronRight: (props) => <IconBase {...props}><path d="m9 18 6-6-6-6"/></IconBase>,
             X: (props) => <IconBase {...props}><path d="M18 6 6 18"/><path d="m6 6 18 18"/></IconBase>,
+            XCircle: (props) => <IconBase {...props}><circle cx="12" cy="12" r="10" /><path d="m15 9-6 6"/><path d="m9 9 6 6"/></IconBase>,
             Activity: (props) => <IconBase {...props}><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></IconBase>,
             TrendingUp: (props) => <IconBase {...props}><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></IconBase>,
             Heart: (props) => <IconBase {...props}><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></IconBase>,
@@ -139,7 +140,7 @@
 
             useEffect(() => { setLocalUserNote(workout.userNote || ""); }, [workout.userNote]);
             
-            // Mark as read when modal opens
+            // Mark as read when modal opens (only if there are unread notes for THIS party)
             useEffect(() => {
                 if (onMarkRead) onMarkRead();
             }, []);
@@ -177,7 +178,7 @@
                                     <h2 className="text-xl font-bold text-white tracking-tight">{selectedDate.split('-').reverse().join('.')}</h2>
                                 </div>
                             </div>
-                            <button type="button" onClick={onClose} className="text-slate-400 hover:text-white p-2 transition-colors"><Icons.X size={24} /></button>
+                            <button type="button" onClick={onClose} className="text-slate-400 hover:text-white p-2 transition-colors"><Icons.XCircle size={28} /></button>
                         </div>
 
                         <div className="p-5 overflow-y-auto custom-scrollbar">
@@ -292,6 +293,7 @@
                 const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
                     setUser(currentUser);
                     if (currentUser) {
+                        // Ensure user record exists
                         await db.collection('users').doc(currentUser.uid).set({
                             uid: currentUser.uid,
                             email: currentUser.email,
@@ -311,6 +313,7 @@
 
             useEffect(() => {
                 if (isCoach) {
+                    // Coach sees all athletes
                     const unsubscribe = db.collection('users').onSnapshot(snapshot => {
                         const users = snapshot.docs.map(doc => doc.data()).filter(u => u.email !== ADMIN_EMAIL);
                         setAthleteList(users);
@@ -321,6 +324,7 @@
 
             useEffect(() => {
                 if (!selectedAthleteId) return;
+                // Listen to selected athlete's workouts
                 const unsubscribe = db.collection("workouts").where("athleteUid", "==", selectedAthleteId).onSnapshot((snapshot) => {
                         const data = {};
                         snapshot.forEach(doc => {
@@ -354,15 +358,34 @@
                 setIsModalOpen(true);
             };
 
+            // Called when Modal Opens to clear notification flags
             const handleMarkRead = async () => {
                 if (!selectedDate || !selectedAthleteId) return;
                 const docId = `${selectedAthleteId}_${selectedDate}`;
-                const updateField = isCoach ? { hasUnreadUserNote: false } : { hasUnreadCoachNote: false };
-                try {
-                    if (workouts[selectedDate]) {
-                        await db.collection("workouts").doc(docId).set(updateField, { merge: true });
-                    }
-                } catch (err) { console.error("Error marking read", err); }
+                
+                const workout = workouts[selectedDate];
+                if (!workout) return;
+
+                // Coach clears 'hasUnreadUserNote' AND decrements athlete's unread counter
+                if (isCoach && workout.hasUnreadUserNote) {
+                    try {
+                        const batch = db.batch();
+                        const workoutRef = db.collection("workouts").doc(docId);
+                        const userRef = db.collection("users").doc(selectedAthleteId);
+
+                        batch.set(workoutRef, { hasUnreadUserNote: false }, { merge: true });
+                        batch.update(userRef, { unreadNoteCount: firebase.firestore.FieldValue.increment(-1) });
+                        
+                        await batch.commit();
+                    } catch (err) { console.error("Error clearing coach notification", err); }
+                }
+                
+                // Athlete clears 'hasUnreadCoachNote' (no counter needed for athlete view usually)
+                if (!isCoach && workout.hasUnreadCoachNote) {
+                    try {
+                        await db.collection("workouts").doc(docId).set({ hasUnreadCoachNote: false }, { merge: true });
+                    } catch (err) { console.error("Error clearing athlete notification", err); }
+                }
             };
 
             const handleCoachSave = async (e) => {
@@ -385,7 +408,7 @@
                     userNote: formData.get('userNote'),
                     updatedBy: user.email,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    hasUnreadCoachNote: true 
+                    hasUnreadCoachNote: true // Notify athlete
                 };
                 const docId = `${selectedAthleteId}_${selectedDate}`;
                 try { await db.collection("workouts").doc(docId).set(updatedWorkout, { merge: true }); setIsModalOpen(false); } catch (err) { alert("Kaydedilemedi!"); }
@@ -394,21 +417,33 @@
             const handleAthleteNoteSave = async (noteText) => {
                 const workoutExists = workouts[selectedDate];
                 if (!workoutExists && !noteText.trim()) return;
+                
                 const docId = `${selectedAthleteId}_${selectedDate}`;
+                
                 try {
                     const payload = {
                         userNote: noteText,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        hasUnreadUserNote: true 
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     };
+
+                    // Only notify/increment if it wasn't already unread
+                    if (!workoutExists || !workoutExists.hasUnreadUserNote) {
+                        payload.hasUnreadUserNote = true;
+                        
+                        // Increment counter on User Doc for Coach Dashboard
+                        const userRef = db.collection("users").doc(selectedAthleteId);
+                        userRef.update({ unreadNoteCount: firebase.firestore.FieldValue.increment(1) }).catch(err => {
+                            // If field doesn't exist, set it
+                            userRef.set({ unreadNoteCount: 1 }, { merge: true });
+                        });
+                    }
+
                     if (!workoutExists) {
                         payload.athleteUid = selectedAthleteId;
                         payload.type = 'workout'; payload.status = 'pending'; payload.km = ""; payload.title = "Serbest Antrenman";
                     }
-                    await db.collection("workouts").doc(docId).set(payload, { merge: true });
                     
-                    // Flag user on Dashboard for Coach
-                    await db.collection("users").doc(selectedAthleteId).set({ hasUnreadNotes: true }, { merge: true });
+                    await db.collection("workouts").doc(docId).set(payload, { merge: true });
                 } catch (err) { console.error("Otomatik kayıt hatası:", err); }
             };
 
@@ -422,8 +457,7 @@
             
             const handleSelectAthlete = (uid) => {
                 setSelectedAthleteId(uid);
-                // Clear note flag when entering athlete
-                db.collection("users").doc(uid).set({ hasUnreadNotes: false }, { merge: true });
+                // Do NOT clear count here. Count clears as coach opens specific workouts.
             };
 
             if (isLoading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Yükleniyor...</div>;
@@ -458,8 +492,12 @@
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                {/* Dashboard Indicator: Only for Notes now */}
-                                                {athlete.hasUnreadNotes && <Icons.FileText className="text-orange-500 animate-pulse" size={20} />}
+                                                {/* Note Counter Badge */}
+                                                {athlete.unreadNoteCount > 0 && (
+                                                    <div className="flex items-center justify-center w-6 h-6 bg-orange-500 text-white text-xs font-bold rounded-full animate-bounce shadow-lg shadow-orange-900/50 border border-slate-900">
+                                                        {athlete.unreadNoteCount}
+                                                    </div>
+                                                )}
                                                 <Icons.ChevronRight className="text-slate-600 group-hover:text-cyan-500" />
                                             </div>
                                         </div>
