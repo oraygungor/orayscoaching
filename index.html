@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Oray's Hyrox Coaching</title>
     
     <!-- Tailwind CSS -->
@@ -49,7 +49,7 @@
     <script type="text/babel">
         // --- CONFIGURATION ---
         const ADMIN_EMAIL = "oray.gungor@gmail.com";
-        const APP_VERSION = "v1.0-hyrox";
+        const APP_VERSION = "v1.1-hyrox";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCu-H_z8dwFV7tc4uS1o79SDD-Cm7Hvei4",
@@ -401,6 +401,9 @@
                 const formData = new FormData(e.target);
                 const rpeVal = formData.get('rpe');
                 
+                const previousCoachNote = workouts[selectedDate]?.coachNote || "";
+                const newCoachNote = formData.get('coachNote') || "";
+                
                 const updatedWorkout = {
                     athleteUid: selectedAthleteId,
                     title: formData.get('title'),
@@ -408,17 +411,28 @@
                     type2: formData.get('type2'), 
                     volume: formData.get('volume'),
                     weight: formData.get('weight'),
-                    rpe: rpeVal === "" ? null : rpeVal,
+                    rpe: rpeVal === "" ? null : Number(rpeVal),
                     description: formData.get('description'),
                     status: formData.get('status'),
-                    coachNote: formData.get('coachNote'),
+                    coachNote: newCoachNote,
                     userNote: formData.get('userNote'),
                     updatedBy: user.email,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    hasUnreadCoachNote: true 
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
+
+                // Notification mantığı: sadece coachNot değiştiğinde bildirimi tetikle
+                if (newCoachNote !== previousCoachNote) {
+                    updatedWorkout.hasUnreadCoachNote = true;
+                }
+                
                 const docId = `${selectedAthleteId}_${selectedDate}`;
-                try { await db.collection("workouts").doc(docId).set(updatedWorkout, { merge: true }); setIsModalOpen(false); } catch (err) { alert("Kaydedilemedi!"); }
+                try { 
+                    await db.collection("workouts").doc(docId).set(updatedWorkout, { merge: true }); 
+                    setIsModalOpen(false); 
+                } catch (err) { 
+                    alert("Kaydedilemedi! Lütfen bağlantınızı kontrol ediniz.");
+                    console.error("Coach save error:", err);
+                }
             };
 
             const handleAthleteNoteSave = async (noteText) => {
@@ -426,8 +440,12 @@
                 if (!workoutExists && !noteText.trim()) return;
                 
                 const docId = `${selectedAthleteId}_${selectedDate}`;
+                const workoutRef = db.collection("workouts").doc(docId);
+                const userRef = db.collection("users").doc(selectedAthleteId);
                 
                 try {
+                    const batch = db.batch();
+
                     const payload = {
                         userNote: noteText,
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -435,17 +453,22 @@
 
                     if (!workoutExists || !workoutExists.hasUnreadUserNote) {
                         payload.hasUnreadUserNote = true;
-                        const userRef = db.collection("users").doc(selectedAthleteId);
-                        userRef.set({ unreadNoteCount: firebase.firestore.FieldValue.increment(1) }, { merge: true });
+                        batch.set(userRef, { unreadNoteCount: firebase.firestore.FieldValue.increment(1) }, { merge: true });
                     }
 
                     if (!workoutExists) {
                         payload.athleteUid = selectedAthleteId;
-                        payload.type = 'functional'; payload.status = 'pending'; payload.volume = ""; payload.title = "Serbest Antrenman";
+                        payload.type = 'functional'; 
+                        payload.status = 'pending'; 
+                        payload.volume = ""; 
+                        payload.title = "Serbest Antrenman";
                     }
                     
-                    await db.collection("workouts").doc(docId).set(payload, { merge: true });
-                } catch (err) { console.error("Otomatik kayıt hatası:", err); }
+                    batch.set(workoutRef, payload, { merge: true });
+                    await batch.commit();
+                } catch (err) { 
+                    console.error("Otomatik kayıt hatası:", err); 
+                }
             };
 
             const handleDeleteWorkout = async () => {
