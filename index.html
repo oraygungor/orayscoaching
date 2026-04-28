@@ -49,7 +49,7 @@
     <script type="text/babel">
         // --- CONFIGURATION ---
         const ADMIN_EMAIL = "oray.gungor@gmail.com";
-        const APP_VERSION = "v1.1-hyrox";
+        const APP_VERSION = "v1.3-hyrox-fixed";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCu-H_z8dwFV7tc4uS1o79SDD-Cm7Hvei4",
@@ -99,13 +99,11 @@
 
         // --- HYROX WORKOUT TYPES ---
         const WORKOUT_TYPES = {
-            run: { label: "Koşu (Run)", bgColor: "bg-blue-900/40", bgRaw: "bg-blue-900", textColor: "text-blue-100", defaultBorder: "border-blue-700/50", icon: <Icons.MapPin size={11} className="text-blue-400" /> },
-            ergs: { label: "SkiErg / Row", bgColor: "bg-cyan-900/40", bgRaw: "bg-cyan-900", textColor: "text-cyan-100", defaultBorder: "border-cyan-700/50", icon: <Icons.Activity size={11} className="text-cyan-400" /> },
-            sled: { label: "Sled Push/Pull", bgColor: "bg-rose-900/40", bgRaw: "bg-rose-900", textColor: "text-rose-100", defaultBorder: "border-rose-700/50", icon: <Icons.TrendingUp size={11} className="text-rose-400" /> },
-            strength: { label: "Kuvvet (Strength)", bgColor: "bg-zinc-800", bgRaw: "bg-zinc-800", textColor: "text-zinc-200", defaultBorder: "border-zinc-600", icon: <Icons.Dumbbell size={11} className="text-zinc-400" /> },
-            functional: { label: "Wallball / Lunge", bgColor: "bg-amber-900/40", bgRaw: "bg-amber-900", textColor: "text-amber-100", defaultBorder: "border-amber-700/50", icon: <Icons.Zap size={11} className="text-amber-400" /> },
+            run: { label: "Koşu", bgColor: "bg-blue-900/40", bgRaw: "bg-blue-900", textColor: "text-blue-100", defaultBorder: "border-blue-700/50", icon: <Icons.MapPin size={11} className="text-blue-400" /> },
+            threshold: { label: "Threshold/Interval", bgColor: "bg-orange-900/40", bgRaw: "bg-orange-900", textColor: "text-orange-100", defaultBorder: "border-orange-700/50", icon: <Icons.Timer size={11} className="text-orange-400" /> },
+            hyrox_interval: { label: "Hyrox Interval", bgColor: "bg-amber-900/40", bgRaw: "bg-amber-900", textColor: "text-amber-100", defaultBorder: "border-amber-700/50", icon: <Icons.Zap size={11} className="text-amber-400" /> },
             simulation: { label: "Hyrox Simülasyon", bgColor: "bg-yellow-600/40", bgRaw: "bg-yellow-600", textColor: "text-yellow-100", defaultBorder: "border-yellow-500/50", icon: <Icons.Flag size={11} className="text-yellow-400" /> },
-            recovery: { label: "Toparlanma", bgColor: "bg-emerald-900/40", bgRaw: "bg-emerald-900", textColor: "text-emerald-100", defaultBorder: "border-emerald-700/50", icon: <Icons.Heart size={11} className="text-emerald-400" /> }
+            strength: { label: "Genel Kuvvet", bgColor: "bg-zinc-800", bgRaw: "bg-zinc-800", textColor: "text-zinc-200", defaultBorder: "border-zinc-600", icon: <Icons.Dumbbell size={11} className="text-zinc-400" /> }
         };
 
         const STATUS_STYLES = {
@@ -287,6 +285,7 @@
             const [currentDate, setCurrentDate] = useState(new Date(2026, 0, 1)); 
             const [workouts, setWorkouts] = useState({});
             const [selectedDate, setSelectedDate] = useState(null);
+            const [viewMode, setViewMode] = useState('year');
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [isLoading, setIsLoading] = useState(true);
             const [athleteList, setAthleteList] = useState([]);
@@ -353,6 +352,30 @@
 
             const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
             const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+            const prevYear = () => setCurrentDate(new Date(currentDate.getFullYear() - 1, currentDate.getMonth(), 1));
+            const nextYear = () => setCurrentDate(new Date(currentDate.getFullYear() + 1, currentDate.getMonth(), 1));
+
+            const getMonthStats = (year, monthIndex) => {
+                let stats = { completed: 0, partial: 0, missed: 0, pending: 0, hasNotification: false };
+                const monthStr = String(monthIndex + 1).padStart(2, '0');
+                const prefix = `${year}-${monthStr}-`;
+                
+                Object.keys(workouts).forEach(dateKey => {
+                    if (dateKey.startsWith(prefix)) {
+                        const workout = workouts[dateKey];
+                        const status = workout.status || 'pending';
+                        if (stats[status] !== undefined) {
+                            stats[status]++;
+                        }
+                        const showNotification = workout && (
+                            (isCoach && workout.hasUnreadUserNote) || 
+                            (!isCoach && workout.hasUnreadCoachNote)
+                        );
+                        if (showNotification) stats.hasNotification = true;
+                    }
+                });
+                return stats;
+            };
 
             const handleDateClick = (day) => {
                 const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -458,7 +481,7 @@
 
                     if (!workoutExists) {
                         payload.athleteUid = selectedAthleteId;
-                        payload.type = 'functional'; 
+                        payload.type = 'strength'; 
                         payload.status = 'pending'; 
                         payload.volume = ""; 
                         payload.title = "Serbest Antrenman";
@@ -561,83 +584,144 @@
                                 )}
                             </div>
                             <div className="flex items-center justify-between bg-slate-900/50 p-1 rounded-2xl border border-slate-800">
-                                <button onClick={prevMonth} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronLeft size={20} /></button>
-                                <h2 className="text-lg font-bold text-white tracking-wide">{monthNames[currentDate.getMonth()]} <span className="text-slate-500 font-normal">{currentDate.getFullYear()}</span></h2>
-                                <button onClick={nextMonth} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronRight size={20} /></button>
+                                {viewMode === 'year' ? (
+                                    <>
+                                        <button onClick={prevYear} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronLeft size={20} /></button>
+                                        <h2 className="text-lg font-bold text-white tracking-wide">{currentDate.getFullYear()} Yılı İstatistikleri</h2>
+                                        <button onClick={nextYear} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronRight size={20} /></button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="flex gap-1">
+                                            <button onClick={() => setViewMode('year')} className="px-3 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-yellow-500 hover:text-yellow-400 transition-colors font-bold text-xs gap-1 border border-yellow-900/30 bg-yellow-900/10"><Icons.ChevronLeft size={16} /> YIL</button>
+                                            <button onClick={prevMonth} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronLeft size={20} /></button>
+                                        </div>
+                                        <h2 className="text-lg font-bold text-white tracking-wide">{monthNames[currentDate.getMonth()]} <span className="text-slate-500 font-normal">{currentDate.getFullYear()}</span></h2>
+                                        <button onClick={nextMonth} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronRight size={20} /></button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
 
                     <div className="max-w-md mx-auto px-3 mt-4">
-                        <div className="grid grid-cols-7 mb-2">
-                            {["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"].map(day => (<div key={day} className="text-center text-[10px] font-bold text-slate-600 uppercase tracking-widest py-1">{day}</div>))}
-                        </div>
-                        <div className="grid grid-cols-7 gap-1.5 auto-rows-fr">
-                            {Array.from({ length: startingDayIndex }).map((_, i) => (<div key={`empty-${i}`} className="min-h-[80px]"></div>))}
-                            {Array.from({ length: daysInMonth }).map((_, i) => {
-                                const day = i + 1;
-                                const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                                const workout = workouts[dateStr];
-                                const isToday = new Date().toDateString() === new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString();
-                                const type1 = workout && workout.type && WORKOUT_TYPES[workout.type] ? WORKOUT_TYPES[workout.type] : WORKOUT_TYPES['functional'];
-                                const type2Key = workout && workout.type2 && WORKOUT_TYPES[workout.type2] ? workout.type2 : null;
-                                const type2 = type2Key ? WORKOUT_TYPES[type2Key] : null;
-                                const status = workout ? (workout.status || 'pending') : null;
-                                
-                                const showNotification = workout && (
-                                    (isCoach && workout.hasUnreadUserNote) || 
-                                    (!isCoach && workout.hasUnreadCoachNote)
-                                );
-
-                                let containerBgClass = 'bg-slate-900'; 
-                                let containerBorderClass = 'border-slate-800 hover:border-slate-700'; 
-
-                                if (workout) {
-                                    if (type2) containerBgClass = 'bg-slate-900'; 
-                                    else containerBgClass = type1.bgColor;
-
-                                    if (status && status !== 'pending') containerBorderClass = STATUS_STYLES[status];
-                                    else containerBorderClass = `border ${type1.defaultBorder}`;
-                                }
-
-                                return (
-                                    <div key={day} onClick={() => handleDateClick(day)} className={`relative min-h-[90px] sm:min-h-[100px] rounded-xl transition-all duration-200 cursor-pointer active:scale-95 flex flex-col overflow-hidden group ${containerBgClass} ${containerBorderClass} ${isToday ? 'ring-2 ring-yellow-500 ring-offset-2 ring-offset-slate-950 z-10' : ''}`}>
-                                        {showNotification && (
-                                            <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full z-20 shadow-lg shadow-red-500/50 animate-ping-slow"></div>
-                                        )}
-                                        {showNotification && (
-                                            <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full z-20 border border-slate-900"></div>
-                                        )}
-
-                                        {workout && type2 && (
-                                            <>
-                                                <div className={`absolute inset-0 w-full h-full z-0 ${type1.bgRaw} opacity-40 [clip-path:polygon(0_0,100%_0,0_100%)]`}></div>
-                                                <div className={`absolute inset-0 w-full h-full z-0 ${type2.bgRaw} opacity-40 [clip-path:polygon(100%_0,100%_100%,0_100%)]`}></div>
-                                            </>
-                                        )}
-                                        <div className="relative z-10 flex justify-between items-start mb-1 p-1.5 pb-0">
-                                            <span className={`text-xs font-bold ${isToday ? 'text-yellow-400' : 'text-slate-300/80 drop-shadow-md'}`}>{day}</span>
-                                            {workout && (<div className="flex gap-1 opacity-90 drop-shadow-md">{type1.icon}{type2 && type2.icon}</div>)}
-                                        </div>
-                                        {workout ? (
-                                            <div className="relative z-10 flex flex-col flex-1 justify-center gap-1.5 p-1 pt-0">
-                                                <div className="text-center"><span className={`text-lg font-black tracking-tight leading-none block drop-shadow-md ${type1.textColor}`}>{workout.volume}</span></div>
-                                                <div className="flex justify-center gap-1 flex-wrap">
-                                                    {workout.rpe && (<span className={`text-[9px] font-bold px-1 py-0.5 rounded-sm shadow-sm text-white ${RPE_COLORS[workout.rpe] || 'bg-slate-700'}`}>RPE {workout.rpe}</span>)}
-                                                    {workout.weight && (<span className="text-[9px] font-bold bg-black/40 text-white/90 px-1 py-0.5 rounded-sm backdrop-blur-sm">{workout.weight}</span>)}
-                                                </div>
+                        {viewMode === 'year' && (
+                            <div className="grid grid-cols-2 gap-3 pb-8">
+                                {monthNames.map((monthName, index) => {
+                                    const stats = getMonthStats(currentDate.getFullYear(), index);
+                                    const total = stats.completed + stats.partial + stats.missed + stats.pending;
+                                    
+                                    return (
+                                        <div key={monthName} onClick={() => {
+                                            setCurrentDate(new Date(currentDate.getFullYear(), index, 1));
+                                            setViewMode('month');
+                                        }} className="bg-slate-900 border border-slate-800 hover:border-yellow-500/50 p-4 rounded-2xl cursor-pointer transition-all active:scale-95 group relative">
+                                            {stats.hasNotification && (
+                                                <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full z-20 shadow-lg shadow-red-500/50 animate-ping-slow"></div>
+                                            )}
+                                            {stats.hasNotification && (
+                                                <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full z-20 border border-slate-900"></div>
+                                            )}
+                                            <h3 className="text-white font-bold text-center mb-3 group-hover:text-yellow-400 transition-colors">{monthName}</h3>
+                                            
+                                            <div className="flex justify-between items-center mb-2 px-1">
+                                                <span className="text-green-500 font-bold text-sm" title="Tamam">{stats.completed}</span>
+                                                <span className="text-yellow-500 font-bold text-sm" title="Kısmen">{stats.partial}</span>
+                                                <span className="text-red-500 font-bold text-sm" title="Eksik">{stats.missed}</span>
+                                                <span className="text-slate-500 font-bold text-sm" title="Plan">{stats.pending}</span>
                                             </div>
-                                        ) : (
-                                            <div className="flex-1 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                {isCoach && (
-                                                    <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 border border-slate-700"><span className="text-sm font-light leading-none mb-0.5">+</span></div>
+                                            
+                                            <div className="flex h-1.5 w-full rounded-full overflow-hidden bg-slate-950">
+                                                {total > 0 ? (
+                                                    <>
+                                                        <div style={{width: `${(stats.completed/total)*100}%`}} className="bg-green-500"></div>
+                                                        <div style={{width: `${(stats.partial/total)*100}%`}} className="bg-yellow-500"></div>
+                                                        <div style={{width: `${(stats.missed/total)*100}%`}} className="bg-red-500"></div>
+                                                        <div style={{width: `${(stats.pending/total)*100}%`}} className="bg-slate-500"></div>
+                                                    </>
+                                                ) : (
+                                                    <div className="w-full bg-slate-800"></div>
                                                 )}
                                             </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {viewMode === 'month' && (
+                            <>
+                                <div className="grid grid-cols-7 mb-2">
+                                    {["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"].map(day => (<div key={day} className="text-center text-[10px] font-bold text-slate-600 uppercase tracking-widest py-1">{day}</div>))}
+                                </div>
+                                <div className="grid grid-cols-7 gap-1.5 auto-rows-fr">
+                                    {Array.from({ length: startingDayIndex }).map((_, i) => (<div key={`empty-${i}`} className="min-h-[80px]"></div>))}
+                                    {Array.from({ length: daysInMonth }).map((_, i) => {
+                                        const day = i + 1;
+                                        const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                                        const workout = workouts[dateStr];
+                                        const isToday = new Date().toDateString() === new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString();
+                                        const type1 = workout && workout.type && WORKOUT_TYPES[workout.type] ? WORKOUT_TYPES[workout.type] : WORKOUT_TYPES['strength'];
+                                        const type2Key = workout && workout.type2 && WORKOUT_TYPES[workout.type2] ? workout.type2 : null;
+                                        const type2 = type2Key ? WORKOUT_TYPES[type2Key] : null;
+                                        const status = workout ? (workout.status || 'pending') : null;
+                                        
+                                        const showNotification = workout && (
+                                            (isCoach && workout.hasUnreadUserNote) || 
+                                            (!isCoach && workout.hasUnreadCoachNote)
+                                        );
+
+                                        let containerBgClass = 'bg-slate-900'; 
+                                        let containerBorderClass = 'border-slate-800 hover:border-slate-700'; 
+
+                                        if (workout) {
+                                            if (type2) containerBgClass = 'bg-slate-900'; 
+                                            else containerBgClass = type1.bgColor;
+
+                                            if (status && status !== 'pending') containerBorderClass = STATUS_STYLES[status];
+                                            else containerBorderClass = `border ${type1.defaultBorder}`;
+                                        }
+
+                                        return (
+                                            <div key={day} onClick={() => handleDateClick(day)} className={`relative min-h-[90px] sm:min-h-[100px] rounded-xl transition-all duration-200 cursor-pointer active:scale-95 flex flex-col overflow-hidden group ${containerBgClass} ${containerBorderClass} ${isToday ? 'ring-2 ring-yellow-500 ring-offset-2 ring-offset-slate-950 z-10' : ''}`}>
+                                                {showNotification && (
+                                                    <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full z-20 shadow-lg shadow-red-500/50 animate-ping-slow"></div>
+                                                )}
+                                                {showNotification && (
+                                                    <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full z-20 border border-slate-900"></div>
+                                                )}
+
+                                                {workout && type2 && (
+                                                    <>
+                                                        <div className={`absolute inset-0 w-full h-full z-0 ${type1.bgRaw} opacity-40 [clip-path:polygon(0_0,100%_0,0_100%)]`}></div>
+                                                        <div className={`absolute inset-0 w-full h-full z-0 ${type2.bgRaw} opacity-40 [clip-path:polygon(100%_0,100%_100%,0_100%)]`}></div>
+                                                    </>
+                                                )}
+                                                <div className="relative z-10 flex justify-between items-start mb-1 p-1.5 pb-0">
+                                                    <span className={`text-xs font-bold ${isToday ? 'text-yellow-400' : 'text-slate-300/80 drop-shadow-md'}`}>{day}</span>
+                                                    {workout && (<div className="flex gap-1 opacity-90 drop-shadow-md">{type1.icon}{type2 && type2.icon}</div>)}
+                                                </div>
+                                                {workout ? (
+                                                    <div className="relative z-10 flex flex-col flex-1 justify-center gap-1.5 p-1 pt-0">
+                                                        <div className="text-center"><span className={`text-lg font-black tracking-tight leading-none block drop-shadow-md ${type1.textColor}`}>{workout.volume}</span></div>
+                                                        <div className="flex justify-center gap-1 flex-wrap">
+                                                            {workout.rpe && (<span className={`text-[9px] font-bold px-1 py-0.5 rounded-sm shadow-sm text-white ${RPE_COLORS[workout.rpe] || 'bg-slate-700'}`}>RPE {workout.rpe}</span>)}
+                                                            {workout.weight && (<span className="text-[9px] font-bold bg-black/40 text-white/90 px-1 py-0.5 rounded-sm backdrop-blur-sm">{workout.weight}</span>)}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex-1 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        {isCoach && (
+                                                            <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 border border-slate-700"><span className="text-sm font-light leading-none mb-0.5">+</span></div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        )}
                     </div>
                     {isModalOpen && (
                         <WorkoutModal 
