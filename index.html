@@ -41,6 +41,19 @@
             75%, 100% { transform: scale(2); opacity: 0; }
         }
         .animate-ping-slow { animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+
+        /* Smooth D&D transitions */
+        .drag-active-target {
+            transform: scale(1.03);
+            z-index: 20;
+            box-shadow: 0 0 20px rgba(234, 179, 8, 0.4);
+            border-color: #eab308 !important;
+        }
+        .dragging-item {
+            opacity: 0.4;
+            filter: grayscale(100%);
+            transform: scale(0.95);
+        }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-200">
@@ -49,7 +62,7 @@
     <script type="text/babel">
         // --- CONFIGURATION ---
         const ADMIN_EMAIL = "oray.gungor@gmail.com";
-        const APP_VERSION = "v1.3-hyrox-fixed";
+        const APP_VERSION = "v1.5-hyrox-pro";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCu-H_z8dwFV7tc4uS1o79SDD-Cm7Hvei4",
@@ -94,7 +107,9 @@
             Trash2: (props) => <IconBase {...props}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></IconBase>,
             LogOut: (props) => <IconBase {...props}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></IconBase>,
             CheckCircle2: (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></IconBase>,
-            Scale: (props) => <IconBase {...props}><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></IconBase>
+            Scale: (props) => <IconBase {...props}><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></IconBase>,
+            Copy: (props) => <IconBase {...props}><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></IconBase>,
+            MoveRight: (props) => <IconBase {...props}><path d="M18 8L22 12L18 16"/><path d="M2 12H22"/></IconBase>
         };
 
         // --- HYROX WORKOUT TYPES ---
@@ -130,10 +145,10 @@
 
         const LoginScreen = ({ onLogin }) => (
             <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 text-center animate-in">
-                <div className="w-20 h-20 bg-gradient-to-tr from-yellow-500 to-amber-600 rounded-3xl flex items-center justify-center text-slate-950 font-extrabold text-3xl shadow-2xl shadow-yellow-900/50 transform rotate-6 mb-8">HC</div>
-                <h1 className="text-4xl font-black text-white mb-2 tracking-tight">Oray's Hyrox Coaching</h1>
+                <div className="w-20 h-20 bg-gradient-to-tr from-yellow-500 to-amber-600 rounded-3xl flex items-center justify-center text-slate-950 font-extrabold text-3xl shadow-2xl shadow-yellow-900/50 transform rotate-6 mb-8 hover:scale-105 transition-transform duration-300">HC</div>
+                <h1 className="text-4xl font-black text-white mb-2 tracking-tight drop-shadow-md">Oray's Hyrox Coaching</h1>
                 <p className="text-slate-400 mb-8 max-w-xs mx-auto">Hyrox atletleri için kişiselleştirilmiş performans programı.</p>
-                <button onClick={onLogin} className="flex items-center gap-3 bg-white text-slate-900 px-8 py-4 rounded-xl font-bold hover:bg-slate-100 transition-all active:scale-95 shadow-xl">Google ile Giriş Yap</button>
+                <button onClick={onLogin} className="flex items-center gap-3 bg-white text-slate-900 px-8 py-4 rounded-xl font-bold hover:bg-slate-100 transition-all active:scale-95 shadow-xl hover:shadow-yellow-500/20">Google ile Giriş Yap</button>
             </div>
         );
 
@@ -141,8 +156,11 @@
             const [localUserNote, setLocalUserNote] = useState(workout.userNote || "");
             const [saveStatus, setSaveStatus] = useState("idle");
             const [deleteConfirm, setDeleteConfirm] = useState(false);
+            const [modalDate, setModalDate] = useState(selectedDate);
+            const [actionType, setActionType] = useState('update'); // update, move, copy
 
             useEffect(() => { setLocalUserNote(workout.userNote || ""); }, [workout.userNote]);
+            useEffect(() => { setModalDate(selectedDate); }, [selectedDate]);
             
             useEffect(() => {
                 if (onMarkRead) onMarkRead();
@@ -163,34 +181,54 @@
                 if (deleteConfirm) onDelete(); else { setDeleteConfirm(true); setTimeout(() => setDeleteConfirm(false), 3000); }
             };
 
+            const handleFormSubmit = (e) => {
+                onSave(e, actionType, modalDate);
+            };
+
             const canEditDetails = isCoach; 
             const canEditStatus = isCoach; 
+            const dateChanged = modalDate !== selectedDate;
 
             return (
-                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/80 backdrop-blur-md animate-in">
-                    <div className="bg-slate-900 w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl border border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[95vh] slide-in">
-                        <div className="bg-slate-800/50 p-4 border-b border-slate-700 flex justify-between items-center sticky top-0 z-10 backdrop-blur-sm">
-                            <div className="flex items-center gap-3">
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in">
+                    <div className="bg-slate-900 w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl border border-slate-700 shadow-2xl shadow-black overflow-hidden flex flex-col max-h-[95vh] slide-in">
+                        <div className="bg-slate-800/80 p-4 border-b border-slate-700 flex justify-between items-center sticky top-0 z-10 backdrop-blur-xl">
+                            <div className="flex items-center gap-3 flex-1">
                                 {hasWorkout && isCoach && (
-                                    <button type="button" onClick={handleDeleteClick} className={`p-2 rounded-full transition-all border mr-1 group flex items-center gap-2 ${deleteConfirm ? "bg-red-600 text-white border-red-600 w-auto px-3" : "bg-red-500/10 hover:bg-red-500/20 text-red-500 border-red-500/20"}`} title="Sil">
+                                    <button type="button" onClick={handleDeleteClick} className={`p-2 rounded-xl transition-all border mr-1 group flex items-center gap-2 ${deleteConfirm ? "bg-red-600 text-white border-red-600 px-3 shadow-lg shadow-red-600/30" : "bg-slate-900 hover:bg-red-500/10 text-slate-400 hover:text-red-500 border-slate-700"}`} title="Sil">
                                         <Icons.Trash2 size={18} /> {deleteConfirm && <span className="text-xs font-bold whitespace-nowrap">Sil?</span>}
                                     </button>
                                 )}
-                                <div>
-                                    <div className="flex items-center gap-2 text-yellow-500 mb-0.5"><Icons.Calendar size={16} /><span className="text-xs font-bold tracking-widest uppercase opacity-80">{selectedDate.split('-')[0]}</span></div>
-                                    <h2 className="text-xl font-bold text-white tracking-tight">{selectedDate.split('-').reverse().join('.')}</h2>
+                                <div className="flex-1">
+                                    {isCoach ? (
+                                        <div className="flex items-center bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 focus-within:border-yellow-500 focus-within:ring-1 focus-within:ring-yellow-500 transition-all max-w-[200px]">
+                                            <Icons.Calendar size={14} className="text-yellow-500 mr-2 opacity-80" />
+                                            <input 
+                                                type="date" 
+                                                value={modalDate}
+                                                onChange={(e) => setModalDate(e.target.value)}
+                                                className="bg-transparent text-white font-bold outline-none w-full text-sm [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] [&::-webkit-calendar-picker-indicator]:opacity-50 hover:[&::-webkit-calendar-picker-indicator]:opacity-100 cursor-pointer"
+                                                required
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <div className="flex items-center gap-2 text-yellow-500 mb-0.5"><Icons.Calendar size={14} /><span className="text-xs font-bold tracking-widest uppercase opacity-80">{selectedDate.split('-')[0]}</span></div>
+                                            <h2 className="text-lg font-bold text-white tracking-tight">{selectedDate.split('-').reverse().join('.')}</h2>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                            <button type="button" onClick={onClose} className="text-slate-400 hover:text-white p-2 transition-colors"><Icons.XCircle size={28} /></button>
+                            <button type="button" onClick={onClose} className="text-slate-400 hover:text-white p-2 transition-colors ml-2 bg-slate-900 rounded-xl border border-slate-700 hover:border-slate-500"><Icons.X size={20} /></button>
                         </div>
 
-                        <div className="p-5 overflow-y-auto custom-scrollbar">
-                            <form id="workoutForm" onSubmit={onSave} className="space-y-6">
-                                <div className="flex gap-2">
+                        <div className="p-5 overflow-y-auto custom-scrollbar bg-gradient-to-b from-slate-900 to-slate-950">
+                            <form id="workoutForm" onSubmit={handleFormSubmit} className="space-y-6">
+                                <div className="flex gap-2 bg-slate-950/50 p-1.5 rounded-2xl border border-slate-800">
                                     {Object.entries(STATUS_CONFIG).map(([key, config]) => (
                                         <label key={key} className="flex-1 cursor-pointer group relative">
                                             <input type="radio" name="status" value={key} defaultChecked={workout.status === key || (!workout.status && key === 'pending')} className="peer sr-only" disabled={!canEditStatus} />
-                                            <div className={`text-center py-3 rounded-xl text-xs font-bold transition-all duration-200 border ${config.class} peer-checked:${config.activeClass} peer-checked:scale-[1.02] peer-checked:shadow-lg peer-checked:border-transparent opacity-70 peer-checked:opacity-100 hover:opacity-100 ${!canEditStatus ? 'opacity-50 cursor-not-allowed' : ''}`}>{config.label}</div>
+                                            <div className={`text-center py-2.5 rounded-xl text-xs font-bold transition-all duration-300 border ${config.class} peer-checked:${config.activeClass} peer-checked:shadow-lg peer-checked:border-transparent opacity-60 peer-checked:opacity-100 hover:opacity-100 ${!canEditStatus ? 'opacity-40 cursor-not-allowed' : ''}`}>{config.label}</div>
                                         </label>
                                     ))}
                                 </div>
@@ -198,81 +236,99 @@
                                 <div className="space-y-4">
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
-                                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block">1. Blok / Hareket</label>
-                                            <select name="type" defaultValue={workout.type || ""} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 outline-none text-white text-sm" disabled={!canEditDetails} required>
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block tracking-wider">1. Blok / Hareket</label>
+                                            <select name="type" defaultValue={workout.type || ""} className="w-full p-3.5 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none text-white text-sm transition-all shadow-inner" disabled={!canEditDetails} required>
                                                 <option value="" disabled>-- Seçiniz --</option>
                                                 {Object.entries(WORKOUT_TYPES).map(([key, val]) => (<option key={key} value={key}>{val.label}</option>))}
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block">2. Blok / Hareket</label>
-                                            <select name="type2" defaultValue={workout.type2 || "none"} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 outline-none text-white text-sm" disabled={!canEditDetails}>
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block tracking-wider">2. Blok / Hareket</label>
+                                            <select name="type2" defaultValue={workout.type2 || "none"} className="w-full p-3.5 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none text-white text-sm transition-all shadow-inner" disabled={!canEditDetails}>
                                                 <option value="none">-- Yok --</option>
                                                 {Object.entries(WORKOUT_TYPES).map(([key, val]) => (<option key={key} value={key}>{val.label}</option>))}
                                             </select>
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block">Başlık</label>
-                                        <input name="title" defaultValue={workout.title} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 outline-none text-white font-medium placeholder-slate-600" placeholder="Örn: 8x1000m Koşu veya Ağır Sled Push" readOnly={!canEditDetails} />
+                                        <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block tracking-wider">Başlık</label>
+                                        <input name="title" defaultValue={workout.title} className="w-full p-3.5 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none text-white font-medium placeholder-slate-600 transition-all shadow-inner" placeholder="Örn: 8x1000m Koşu veya Ağır Sled Push" readOnly={!canEditDetails} />
                                     </div>
                                     <div className="grid grid-cols-3 gap-3">
                                         <div>
-                                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block" title="Mesafe veya Tekrar Sayısı">Hacim</label>
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block tracking-wider" title="Mesafe veya Tekrar Sayısı">Hacim</label>
                                             <div className="relative">
-                                                <input name="volume" defaultValue={workout.volume} className="w-full p-3 pl-8 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 outline-none text-white text-sm" placeholder="Örn: 5km, 100x" readOnly={!canEditDetails} />
-                                                <Icons.Activity size={14} className="absolute left-2.5 top-3.5 text-slate-500" />
+                                                <input name="volume" defaultValue={workout.volume} className="w-full p-3.5 pl-9 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none text-white text-sm transition-all shadow-inner" placeholder="Örn: 5km" readOnly={!canEditDetails} />
+                                                <Icons.Activity size={14} className="absolute left-3 top-4 text-slate-500" />
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block">RPE (1-10)</label>
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block tracking-wider">RPE (1-10)</label>
                                             <div className="relative">
-                                                <select name="rpe" defaultValue={workout.rpe || ""} className="w-full p-3 pl-8 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 outline-none text-white text-sm appearance-none" disabled={!canEditDetails}>
+                                                <select name="rpe" defaultValue={workout.rpe || ""} className="w-full p-3.5 pl-9 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none text-white text-sm appearance-none transition-all shadow-inner" disabled={!canEditDetails}>
                                                     <option value="">--</option>
                                                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(z => <option key={z} value={z}>{z}</option>)}
                                                 </select>
-                                                <Icons.Gauge size={14} className="absolute left-2.5 top-3.5 text-slate-500" />
+                                                <Icons.Gauge size={14} className="absolute left-3 top-4 text-slate-500" />
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block">Ağırlık (KG)</label>
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block tracking-wider">Ağırlık (KG)</label>
                                             <div className="relative">
-                                                <input name="weight" defaultValue={workout.weight} className="w-full p-3 pl-8 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 outline-none text-white text-sm" placeholder="125kg" readOnly={!canEditDetails} />
-                                                <Icons.Scale size={14} className="absolute left-2.5 top-3.5 text-slate-500" />
+                                                <input name="weight" defaultValue={workout.weight} className="w-full p-3.5 pl-9 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none text-white text-sm transition-all shadow-inner" placeholder="125kg" readOnly={!canEditDetails} />
+                                                <Icons.Scale size={14} className="absolute left-3 top-4 text-slate-500" />
                                             </div>
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block">Açıklama / WOD Detayı</label>
-                                        <textarea name="description" defaultValue={workout.description} rows={3} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 outline-none text-slate-300 text-sm placeholder-slate-600" placeholder="Antrenman detayları..." readOnly={!canEditDetails} />
+                                        <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block tracking-wider">Açıklama / WOD Detayı</label>
+                                        <textarea name="description" defaultValue={workout.description} rows={3} className="w-full p-3.5 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none text-slate-200 text-sm placeholder-slate-600 transition-all shadow-inner leading-relaxed" placeholder="Antrenman detayları..." readOnly={!canEditDetails} />
                                     </div>
                                 </div>
 
-                                <div className="space-y-4 pt-2 border-t border-slate-800">
-                                    <div className="bg-amber-950/20 p-3 rounded-xl border border-amber-900/30">
-                                        <label className="flex items-center gap-2 text-[10px] font-bold text-amber-500 mb-2 uppercase"><Icons.Zap size={12} /> Coach Notu</label>
-                                        <textarea name="coachNote" defaultValue={workout.coachNote} className="w-full bg-transparent border-0 p-0 text-amber-100 text-sm focus:ring-0 placeholder-amber-500/30" placeholder="Notunuzu buraya girin..." readOnly={!canEditDetails} />
+                                <div className="space-y-4 pt-4 border-t border-slate-800">
+                                    <div className="bg-gradient-to-br from-amber-950/40 to-slate-900 p-4 rounded-xl border border-amber-900/40 shadow-sm relative overflow-hidden">
+                                        <div className="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
+                                        <label className="flex items-center gap-2 text-[10px] font-bold text-amber-500 mb-2 uppercase tracking-widest"><Icons.Zap size={14} /> Coach Notu</label>
+                                        <textarea name="coachNote" defaultValue={workout.coachNote} className="w-full bg-transparent border-0 p-0 text-amber-100 text-sm focus:ring-0 placeholder-amber-700/50 leading-relaxed resize-none min-h-[60px]" placeholder="Atlet için özel notlar..." readOnly={!canEditDetails} />
                                     </div>
-                                    <div className="bg-slate-800/40 p-3 rounded-xl border border-slate-700/50 relative">
+                                    
+                                    <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 relative shadow-sm">
                                         <div className="flex justify-between items-center mb-2">
-                                            <label className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase"><Icons.Dumbbell size={12} /> Sporcu Geri Bildirimi</label>
-                                            {!isCoach && saveStatus === 'saved' && <span className="text-[10px] text-green-400 flex items-center gap-1"><Icons.CheckCircle2 size={12} /> Kaydedildi</span>}
+                                            <label className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest"><Icons.Dumbbell size={14} /> Sporcu Geri Bildirimi</label>
+                                            {!isCoach && saveStatus === 'saved' && <span className="text-[10px] text-green-400 flex items-center gap-1 bg-green-500/10 px-2 py-0.5 rounded-full"><Icons.CheckCircle2 size={12} /> Kaydedildi</span>}
                                         </div>
                                         {!isCoach ? (
-                                            <textarea value={localUserNote} onChange={(e) => setLocalUserNote(e.target.value)} onBlur={onUserNoteBlur} className="w-full bg-transparent border-0 p-0 text-white text-sm focus:ring-0 placeholder-slate-500" placeholder="Antrenman nasıl geçti? Pacing nasıldı? Notlarını buraya yaz..." />
+                                            <textarea value={localUserNote} onChange={(e) => setLocalUserNote(e.target.value)} onBlur={onUserNoteBlur} className="w-full bg-transparent border-0 p-0 text-white text-sm focus:ring-0 placeholder-slate-500 leading-relaxed resize-none min-h-[60px]" placeholder="Antrenman nasıl geçti? Pacing nasıldı? Notlarını buraya yaz..." />
                                         ) : (
-                                            <textarea name="userNote" defaultValue={workout.userNote} className="w-full bg-transparent border-0 p-0 text-white text-sm focus:ring-0 placeholder-slate-500" placeholder="Sporcu notu..." />
+                                            <textarea name="userNote" defaultValue={workout.userNote} className="w-full bg-transparent border-0 p-0 text-white text-sm focus:ring-0 placeholder-slate-600 leading-relaxed resize-none min-h-[60px]" placeholder="Sporcu henüz not girmedi..." readOnly />
                                         )}
                                     </div>
                                 </div>
-                                <div className="h-6 sm:h-0"></div>
+                                <div className="h-4 sm:h-0"></div>
                             </form>
                         </div>
 
                         {isCoach && (
-                            <div className="p-4 border-t border-slate-800 bg-slate-900 flex gap-3 sticky bottom-0 z-10 pb-8 sm:pb-4">
-                                <button type="button" onClick={onClose} className="flex-1 py-3.5 rounded-xl font-medium text-slate-400 hover:bg-slate-800 transition-colors">Vazgeç</button>
-                                <button type="submit" form="workoutForm" className="flex-[2] py-3.5 rounded-xl font-bold bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-900 shadow-lg shadow-yellow-900/40 active:scale-95 transition-all">Programı Kaydet</button>
+                            <div className="p-4 border-t border-slate-800 bg-slate-900 flex gap-3 sticky bottom-0 z-10 pb-8 sm:pb-4 backdrop-blur-xl bg-slate-900/90">
+                                {dateChanged ? (
+                                    <>
+                                        <button type="button" onClick={onClose} className="px-4 py-3.5 rounded-xl font-medium text-slate-400 hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-700">İptal</button>
+                                        <div className="flex-1 flex gap-2">
+                                            <button type="submit" form="workoutForm" onClick={() => setActionType('move')} className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 transition-all active:scale-95 shadow-lg">
+                                                <Icons.MoveRight size={18} /> Taşı
+                                            </button>
+                                            <button type="submit" form="workoutForm" onClick={() => setActionType('copy')} className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-900 shadow-lg shadow-yellow-900/40 hover:shadow-yellow-500/40 active:scale-95 transition-all">
+                                                <Icons.Copy size={18} /> Kopyala
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button type="button" onClick={onClose} className="flex-1 py-3.5 rounded-xl font-medium text-slate-400 hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-700">Vazgeç</button>
+                                        <button type="submit" form="workoutForm" onClick={() => setActionType('update')} className="flex-[2] py-3.5 rounded-xl font-bold bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-900 shadow-lg shadow-yellow-900/40 hover:shadow-yellow-500/40 active:scale-95 transition-all">Programı Kaydet</button>
+                                    </>
+                                )}
                             </div>
                         )}
                     </div>
@@ -282,14 +338,18 @@
 
         const App = () => {
             const [user, setUser] = useState(null);
-            const [currentDate, setCurrentDate] = useState(new Date(2026, 0, 1)); 
+            const [currentDate, setCurrentDate] = useState(new Date()); 
             const [workouts, setWorkouts] = useState({});
             const [selectedDate, setSelectedDate] = useState(null);
-            const [viewMode, setViewMode] = useState('year');
+            const [viewMode, setViewMode] = useState('month');
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [isLoading, setIsLoading] = useState(true);
             const [athleteList, setAthleteList] = useState([]);
             const [selectedAthleteId, setSelectedAthleteId] = useState(null);
+            
+            // Drag and Drop State
+            const [draggedDate, setDraggedDate] = useState(null);
+            const [dragOverDate, setDragOverDate] = useState(null);
 
             const isCoach = user?.email === ADMIN_EMAIL;
 
@@ -379,14 +439,78 @@
 
             const handleDateClick = (day) => {
                 const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                
-                if (!isCoach && !workouts[dateStr]) {
-                    return; 
-                }
-                
+                if (!isCoach && !workouts[dateStr]) return; 
                 setSelectedDate(dateStr);
                 setIsModalOpen(true);
             };
+
+            // --- DRAG AND DROP HANDLERS ---
+            const handleDragStart = (e, dateStr) => {
+                if (!isCoach || !workouts[dateStr]) {
+                    e.preventDefault();
+                    return;
+                }
+                setDraggedDate(dateStr);
+                // Set generic data for standard compliance, visual effect
+                e.dataTransfer.effectAllowed = "copyMove";
+                e.dataTransfer.setData("text/plain", dateStr);
+            };
+
+            const handleDragOver = (e, dateStr) => {
+                e.preventDefault(); // Necessary to allow dropping
+                if (dateStr !== dragOverDate) {
+                    setDragOverDate(dateStr);
+                }
+                // Optional: Change cursor based on modifier key
+                e.dataTransfer.dropEffect = (e.altKey || e.ctrlKey) ? "copy" : "move";
+            };
+
+            const handleDragLeave = () => {
+                setDragOverDate(null);
+            };
+
+            const handleDrop = async (e, targetDateStr) => {
+                e.preventDefault();
+                setDragOverDate(null);
+
+                if (!draggedDate || draggedDate === targetDateStr) {
+                    setDraggedDate(null);
+                    return;
+                }
+
+                const sourceData = workouts[draggedDate];
+                if (!sourceData) return;
+
+                // Copy if modifier key is held
+                const isCopy = e.altKey || e.ctrlKey;
+
+                const targetDocId = `${selectedAthleteId}_${targetDateStr}`;
+                const sourceDocId = `${selectedAthleteId}_${draggedDate}`;
+
+                const batch = db.batch();
+                
+                // Clean up data before saving to new location
+                const { id, ...dataToMove } = sourceData;
+                
+                // Mark as updated by coach
+                dataToMove.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+                dataToMove.hasUnreadCoachNote = true; // Alert athlete it was moved/copied
+
+                batch.set(db.collection("workouts").doc(targetDocId), dataToMove, { merge: true });
+
+                if (!isCopy) {
+                    batch.delete(db.collection("workouts").doc(sourceDocId));
+                }
+
+                try {
+                    await batch.commit();
+                } catch (err) {
+                    console.error("D&D Error:", err);
+                    alert("Taşıma işlemi başarısız oldu!");
+                }
+                setDraggedDate(null);
+            };
+
 
             const handleMarkRead = async () => {
                 if (!selectedDate || !selectedAthleteId) return;
@@ -418,7 +542,7 @@
                 }
             };
 
-            const handleCoachSave = async (e) => {
+            const handleCoachSave = async (e, actionType, targetDate) => {
                 e.preventDefault();
                 if (!user || !selectedAthleteId) return;
                 const formData = new FormData(e.target);
@@ -443,14 +567,23 @@
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
 
-                // Notification mantığı: sadece coachNot değiştiğinde bildirimi tetikle
-                if (newCoachNote !== previousCoachNote) {
+                // Notification logic
+                if (newCoachNote !== previousCoachNote || actionType !== 'update') {
                     updatedWorkout.hasUnreadCoachNote = true;
                 }
                 
-                const docId = `${selectedAthleteId}_${selectedDate}`;
+                const batch = db.batch();
+                const targetDocId = `${selectedAthleteId}_${targetDate}`;
+                
+                batch.set(db.collection("workouts").doc(targetDocId), updatedWorkout, { merge: true });
+
+                // If moving to a new date, delete the old one
+                if (actionType === 'move' && targetDate !== selectedDate) {
+                    batch.delete(db.collection("workouts").doc(`${selectedAthleteId}_${selectedDate}`));
+                }
+
                 try { 
-                    await db.collection("workouts").doc(docId).set(updatedWorkout, { merge: true }); 
+                    await batch.commit();
                     setIsModalOpen(false); 
                 } catch (err) { 
                     alert("Kaydedilemedi! Lütfen bağlantınızı kontrol ediniz.");
@@ -514,36 +647,48 @@
                     <div className="min-h-screen bg-slate-950 text-slate-200 p-6 animate-in">
                         <div className="max-w-2xl mx-auto">
                             <div className="flex justify-between items-center mb-8">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 bg-gradient-to-tr from-yellow-500 to-amber-600 rounded-xl flex items-center justify-center text-slate-950 font-bold text-xl shadow-lg">HC</div>
+                                <div className="flex items-center gap-4">
+                                    <div className="w-14 h-14 bg-gradient-to-tr from-yellow-500 to-amber-600 rounded-2xl flex items-center justify-center text-slate-950 font-black text-2xl shadow-xl shadow-yellow-900/30">HC</div>
                                     <div>
-                                        <h1 className="text-2xl font-bold text-white">Coach Dashboard</h1>
-                                        <p className="text-xs text-yellow-500 font-mono mt-1">{APP_VERSION}</p>
+                                        <h1 className="text-3xl font-black text-white tracking-tight">Coach Portal</h1>
+                                        <p className="text-xs text-yellow-500 font-mono mt-0.5 tracking-wider">{APP_VERSION}</p>
                                     </div>
                                 </div>
-                                <button onClick={handleLogout} className="bg-slate-800 p-3 rounded-full text-slate-400 hover:text-white"><Icons.LogOut size={20} /></button>
+                                <button onClick={handleLogout} className="bg-slate-800 p-3.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-all active:scale-95 shadow-md"><Icons.LogOut size={20} /></button>
                             </div>
-                            <h2 className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-4">Atlet Listesi</h2>
+                            
+                            <h2 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <Icons.User size={14}/> Atlet Listesi
+                            </h2>
+                            
                             <div className="grid gap-4">
                                 {athleteList.length === 0 ? (
-                                    <div className="p-8 text-center border border-dashed border-slate-700 rounded-2xl text-slate-500">Henüz kayıtlı atlet yok.</div>
+                                    <div className="p-10 text-center border-2 border-dashed border-slate-800 rounded-3xl text-slate-500 font-medium">Henüz kayıtlı atlet yok.</div>
                                 ) : (
                                     athleteList.map(athlete => (
-                                        <div key={athlete.uid} onClick={() => handleSelectAthlete(athlete.uid)} className="bg-slate-900 border border-slate-800 hover:border-yellow-600 p-4 rounded-2xl flex items-center justify-between cursor-pointer transition-all hover:bg-slate-800 group relative">
+                                        <div key={athlete.uid} onClick={() => handleSelectAthlete(athlete.uid)} className="bg-slate-900/50 border border-slate-800 hover:border-yellow-600/50 p-4 rounded-2xl flex items-center justify-between cursor-pointer transition-all duration-300 hover:bg-slate-800 hover:shadow-lg hover:-translate-y-0.5 group relative backdrop-blur-sm">
                                             <div className="flex items-center gap-4">
-                                                <img src={athlete.photoURL || "https://via.placeholder.com/40"} className="w-12 h-12 rounded-full border-2 border-slate-700 group-hover:border-yellow-500 transition-colors" alt=""/>
+                                                <div className="relative">
+                                                    <img src={athlete.photoURL || "https://via.placeholder.com/40"} className="w-14 h-14 rounded-full border-2 border-slate-700 group-hover:border-yellow-500 transition-colors object-cover" alt=""/>
+                                                    {(athlete.unreadNoteCount || 0) > 0 && (
+                                                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-slate-900 animate-pulse"></div>
+                                                    )}
+                                                </div>
                                                 <div>
-                                                    <h3 className="font-bold text-white text-lg">{athlete.displayName}</h3>
-                                                    <p className="text-xs text-slate-500">{athlete.email}</p>
+                                                    <h3 className="font-bold text-white text-lg tracking-tight">{athlete.displayName}</h3>
+                                                    <p className="text-xs text-slate-500 font-medium">{athlete.email}</p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-4">
                                                 {(athlete.unreadNoteCount || 0) > 0 && (
-                                                    <div className="flex items-center justify-center w-7 h-7 bg-amber-500 text-slate-950 text-xs font-bold rounded-full animate-bounce shadow-lg shadow-amber-900/50 border-2 border-slate-900">
-                                                        {athlete.unreadNoteCount}
+                                                    <div className="flex items-center gap-1.5 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20">
+                                                        <Icons.FileText size={12} className="text-amber-500"/>
+                                                        <span className="text-amber-500 text-xs font-bold">{athlete.unreadNoteCount} Yeni Not</span>
                                                     </div>
                                                 )}
-                                                <Icons.ChevronRight className="text-slate-600 group-hover:text-yellow-500" />
+                                                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-yellow-500/20 transition-colors">
+                                                    <Icons.ChevronRight className="text-slate-500 group-hover:text-yellow-500" size={18}/>
+                                                </div>
                                             </div>
                                         </div>
                                     ))
@@ -556,51 +701,58 @@
 
             return (
                 <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-yellow-500/30 pb-24 animate-in">
-                    <div className="sticky top-0 z-30 bg-slate-950/80 backdrop-blur-md border-b border-slate-800">
-                        <div className="max-w-md mx-auto px-4 pt-4 pb-2">
-                            <div className="flex justify-between items-center mb-4">
+                    <div className="sticky top-0 z-30 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800/80 shadow-md">
+                        <div className="max-w-md mx-auto px-4 pt-4 pb-3">
+                            <div className="flex justify-between items-center mb-5">
                                 <div className="flex items-center gap-3">
                                     {isCoach ? (
-                                        <button onClick={() => setSelectedAthleteId(null)} className="flex items-center gap-2 text-slate-400 hover:text-white transition">
-                                            <Icons.ChevronLeft size={20} /> <span className="text-sm font-bold">Atletler</span>
+                                        <button onClick={() => setSelectedAthleteId(null)} className="flex items-center justify-center w-10 h-10 bg-slate-900 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-all border border-slate-800">
+                                            <Icons.ChevronLeft size={20} />
                                         </button>
                                     ) : (
-                                        <div className="w-10 h-10 bg-gradient-to-tr from-yellow-500 to-amber-600 rounded-xl flex items-center justify-center text-slate-950 font-extrabold shadow-lg shadow-yellow-900/50 transform rotate-3">HC</div>
+                                        <div className="w-10 h-10 bg-gradient-to-tr from-yellow-500 to-amber-600 rounded-xl flex items-center justify-center text-slate-950 font-black shadow-lg shadow-yellow-900/40">HC</div>
                                     )}
                                     
                                     <div>
-                                        <h1 className="text-lg font-bold text-white leading-none tracking-tight text-right">
+                                        <h1 className="text-xl font-bold text-white leading-none tracking-tight">
                                             {isCoach 
                                                 ? (athleteList.find(a => a.uid === selectedAthleteId)?.displayName || 'Atlet') 
                                                 : "Hyrox Coaching"}
                                         </h1>
-                                        <p className="text-[10px] font-medium text-slate-500 uppercase tracking-widest mt-0.5 text-right">
-                                            {isCoach ? 'Program Düzenleme' : user.displayName}
+                                        <p className="text-[10px] font-bold text-yellow-500 uppercase tracking-widest mt-1">
+                                            {isCoach ? 'Program Yönetimi' : user.displayName}
                                         </p>
                                     </div>
                                 </div>
                                 {!isCoach && (
-                                    <button onClick={handleLogout} className="bg-slate-800 p-2 rounded-full text-slate-400 hover:text-white"><Icons.LogOut size={16} /></button>
+                                    <button onClick={handleLogout} className="bg-slate-900 border border-slate-800 p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all"><Icons.LogOut size={18} /></button>
                                 )}
                             </div>
-                            <div className="flex items-center justify-between bg-slate-900/50 p-1 rounded-2xl border border-slate-800">
+                            
+                            <div className="flex items-center justify-between bg-slate-900 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
                                 {viewMode === 'year' ? (
                                     <>
                                         <button onClick={prevYear} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronLeft size={20} /></button>
-                                        <h2 className="text-lg font-bold text-white tracking-wide">{currentDate.getFullYear()} Yılı İstatistikleri</h2>
+                                        <h2 className="text-sm font-bold text-white tracking-wider uppercase">{currentDate.getFullYear()} İstatistikleri</h2>
                                         <button onClick={nextYear} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronRight size={20} /></button>
                                     </>
                                 ) : (
                                     <>
                                         <div className="flex gap-1">
-                                            <button onClick={() => setViewMode('year')} className="px-3 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-yellow-500 hover:text-yellow-400 transition-colors font-bold text-xs gap-1 border border-yellow-900/30 bg-yellow-900/10"><Icons.ChevronLeft size={16} /> YIL</button>
+                                            <button onClick={() => setViewMode('year')} className="px-3 h-10 flex items-center justify-center rounded-xl hover:bg-yellow-500 hover:text-slate-950 text-yellow-500 transition-all font-bold text-[10px] uppercase tracking-widest gap-1 border border-yellow-500/30 bg-yellow-500/10"><Icons.Calendar size={14} /> YIL</button>
                                             <button onClick={prevMonth} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronLeft size={20} /></button>
                                         </div>
-                                        <h2 className="text-lg font-bold text-white tracking-wide">{monthNames[currentDate.getMonth()]} <span className="text-slate-500 font-normal">{currentDate.getFullYear()}</span></h2>
+                                        <h2 className="text-base font-bold text-white tracking-wide">{monthNames[currentDate.getMonth()]} <span className="text-slate-500 font-medium">{currentDate.getFullYear()}</span></h2>
                                         <button onClick={nextMonth} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronRight size={20} /></button>
                                     </>
                                 )}
                             </div>
+                            {isCoach && viewMode === 'month' && (
+                                <div className="text-[9px] text-center mt-3 text-slate-500 font-medium tracking-widest uppercase flex items-center justify-center gap-1.5">
+                                    <Icons.Activity size={10} className="text-yellow-500"/>
+                                    Sürükle-bırak ile taşı • Kopyalamak için sürüklerken [Alt/Option]
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -615,23 +767,23 @@
                                         <div key={monthName} onClick={() => {
                                             setCurrentDate(new Date(currentDate.getFullYear(), index, 1));
                                             setViewMode('month');
-                                        }} className="bg-slate-900 border border-slate-800 hover:border-yellow-500/50 p-4 rounded-2xl cursor-pointer transition-all active:scale-95 group relative">
+                                        }} className="bg-slate-900 border border-slate-800 hover:border-yellow-500/50 p-4 rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group relative">
                                             {stats.hasNotification && (
                                                 <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full z-20 shadow-lg shadow-red-500/50 animate-ping-slow"></div>
                                             )}
                                             {stats.hasNotification && (
                                                 <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full z-20 border border-slate-900"></div>
                                             )}
-                                            <h3 className="text-white font-bold text-center mb-3 group-hover:text-yellow-400 transition-colors">{monthName}</h3>
+                                            <h3 className="text-white font-bold text-center mb-4 group-hover:text-yellow-400 transition-colors tracking-wide">{monthName}</h3>
                                             
                                             <div className="flex justify-between items-center mb-2 px-1">
-                                                <span className="text-green-500 font-bold text-sm" title="Tamam">{stats.completed}</span>
-                                                <span className="text-yellow-500 font-bold text-sm" title="Kısmen">{stats.partial}</span>
-                                                <span className="text-red-500 font-bold text-sm" title="Eksik">{stats.missed}</span>
-                                                <span className="text-slate-500 font-bold text-sm" title="Plan">{stats.pending}</span>
+                                                <span className="text-green-500 font-bold text-sm bg-green-500/10 w-6 h-6 flex items-center justify-center rounded-full" title="Tamam">{stats.completed}</span>
+                                                <span className="text-yellow-500 font-bold text-sm bg-yellow-500/10 w-6 h-6 flex items-center justify-center rounded-full" title="Kısmen">{stats.partial}</span>
+                                                <span className="text-red-500 font-bold text-sm bg-red-500/10 w-6 h-6 flex items-center justify-center rounded-full" title="Eksik">{stats.missed}</span>
+                                                <span className="text-slate-400 font-bold text-sm bg-slate-800 w-6 h-6 flex items-center justify-center rounded-full" title="Plan">{stats.pending}</span>
                                             </div>
                                             
-                                            <div className="flex h-1.5 w-full rounded-full overflow-hidden bg-slate-950">
+                                            <div className="flex h-1.5 w-full rounded-full overflow-hidden bg-slate-950/50 mt-3 shadow-inner">
                                                 {total > 0 ? (
                                                     <>
                                                         <div style={{width: `${(stats.completed/total)*100}%`}} className="bg-green-500"></div>
@@ -651,11 +803,11 @@
 
                         {viewMode === 'month' && (
                             <>
-                                <div className="grid grid-cols-7 mb-2">
-                                    {["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"].map(day => (<div key={day} className="text-center text-[10px] font-bold text-slate-600 uppercase tracking-widest py-1">{day}</div>))}
+                                <div className="grid grid-cols-7 mb-2 bg-slate-900/50 rounded-xl py-2 border border-slate-800/50">
+                                    {["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"].map(day => (<div key={day} className="text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest">{day}</div>))}
                                 </div>
                                 <div className="grid grid-cols-7 gap-1.5 auto-rows-fr">
-                                    {Array.from({ length: startingDayIndex }).map((_, i) => (<div key={`empty-${i}`} className="min-h-[80px]"></div>))}
+                                    {Array.from({ length: startingDayIndex }).map((_, i) => (<div key={`empty-${i}`} className="min-h-[90px]"></div>))}
                                     {Array.from({ length: daysInMonth }).map((_, i) => {
                                         const day = i + 1;
                                         const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -671,8 +823,8 @@
                                             (!isCoach && workout.hasUnreadCoachNote)
                                         );
 
-                                        let containerBgClass = 'bg-slate-900'; 
-                                        let containerBorderClass = 'border-slate-800 hover:border-slate-700'; 
+                                        let containerBgClass = 'bg-slate-900/80'; 
+                                        let containerBorderClass = 'border-slate-800/80 hover:border-slate-600'; 
 
                                         if (workout) {
                                             if (type2) containerBgClass = 'bg-slate-900'; 
@@ -682,13 +834,28 @@
                                             else containerBorderClass = `border ${type1.defaultBorder}`;
                                         }
 
+                                        const isDragged = draggedDate === dateStr;
+                                        const isDragOver = dragOverDate === dateStr;
+
                                         return (
-                                            <div key={day} onClick={() => handleDateClick(day)} className={`relative min-h-[90px] sm:min-h-[100px] rounded-xl transition-all duration-200 cursor-pointer active:scale-95 flex flex-col overflow-hidden group ${containerBgClass} ${containerBorderClass} ${isToday ? 'ring-2 ring-yellow-500 ring-offset-2 ring-offset-slate-950 z-10' : ''}`}>
+                                            <div 
+                                                key={day} 
+                                                draggable={isCoach && !!workout}
+                                                onDragStart={(e) => handleDragStart(e, dateStr)}
+                                                onDragOver={(e) => handleDragOver(e, dateStr)}
+                                                onDragLeave={handleDragLeave}
+                                                onDrop={(e) => handleDrop(e, dateStr)}
+                                                onClick={() => handleDateClick(day)} 
+                                                className={`relative min-h-[95px] sm:min-h-[105px] rounded-[14px] transition-all duration-200 cursor-pointer flex flex-col overflow-hidden group backdrop-blur-sm
+                                                ${containerBgClass} ${containerBorderClass} 
+                                                ${isToday ? 'ring-2 ring-yellow-500 ring-offset-2 ring-offset-slate-950 z-10' : ''}
+                                                ${isDragOver ? 'drag-active-target' : ''}
+                                                ${isDragged ? 'dragging-item' : 'hover:scale-[1.02] hover:shadow-lg hover:z-10'}
+                                                ${!workout && !isCoach ? 'opacity-30' : ''}
+                                                `}
+                                            >
                                                 {showNotification && (
-                                                    <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full z-20 shadow-lg shadow-red-500/50 animate-ping-slow"></div>
-                                                )}
-                                                {showNotification && (
-                                                    <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full z-20 border border-slate-900"></div>
+                                                    <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full z-20 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse"></div>
                                                 )}
 
                                                 {workout && type2 && (
@@ -697,22 +864,31 @@
                                                         <div className={`absolute inset-0 w-full h-full z-0 ${type2.bgRaw} opacity-40 [clip-path:polygon(100%_0,100%_100%,0_100%)]`}></div>
                                                     </>
                                                 )}
-                                                <div className="relative z-10 flex justify-between items-start mb-1 p-1.5 pb-0">
-                                                    <span className={`text-xs font-bold ${isToday ? 'text-yellow-400' : 'text-slate-300/80 drop-shadow-md'}`}>{day}</span>
-                                                    {workout && (<div className="flex gap-1 opacity-90 drop-shadow-md">{type1.icon}{type2 && type2.icon}</div>)}
+                                                
+                                                <div className="relative z-10 flex justify-between items-start mb-1 p-2 pb-0">
+                                                    <span className={`text-xs font-bold ${isToday ? 'text-yellow-400 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]' : 'text-slate-400 group-hover:text-slate-300'}`}>{day}</span>
+                                                    {workout && (<div className="flex gap-0.5 opacity-90 filter drop-shadow-md bg-slate-950/40 px-1 py-0.5 rounded-md backdrop-blur-md border border-white/5">{type1.icon}{type2 && type2.icon}</div>)}
                                                 </div>
+                                                
                                                 {workout ? (
-                                                    <div className="relative z-10 flex flex-col flex-1 justify-center gap-1.5 p-1 pt-0">
-                                                        <div className="text-center"><span className={`text-lg font-black tracking-tight leading-none block drop-shadow-md ${type1.textColor}`}>{workout.volume}</span></div>
+                                                    <div className="relative z-10 flex flex-col flex-1 justify-center gap-1.5 p-1.5 pt-0">
+                                                        <div className="text-center">
+                                                            <span className={`text-[17px] font-black tracking-tighter leading-none block drop-shadow-md ${type1.textColor}`}>
+                                                                {workout.volume || '-'}
+                                                            </span>
+                                                        </div>
                                                         <div className="flex justify-center gap-1 flex-wrap">
-                                                            {workout.rpe && (<span className={`text-[9px] font-bold px-1 py-0.5 rounded-sm shadow-sm text-white ${RPE_COLORS[workout.rpe] || 'bg-slate-700'}`}>RPE {workout.rpe}</span>)}
-                                                            {workout.weight && (<span className="text-[9px] font-bold bg-black/40 text-white/90 px-1 py-0.5 rounded-sm backdrop-blur-sm">{workout.weight}</span>)}
+                                                            {workout.rpe && (<span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm text-white border border-white/10 ${RPE_COLORS[workout.rpe] || 'bg-slate-700'}`}>R{workout.rpe}</span>)}
+                                                            {workout.weight && (<span className="text-[9px] font-bold bg-slate-950/60 text-white/90 px-1.5 py-0.5 rounded shadow-sm border border-white/5 backdrop-blur-sm">{workout.weight}</span>)}
                                                         </div>
                                                     </div>
                                                 ) : (
                                                     <div className="flex-1 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        {isCoach && (
-                                                            <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 border border-slate-700"><span className="text-sm font-light leading-none mb-0.5">+</span></div>
+                                                        {isCoach && !isDragged && (
+                                                            <div className="w-6 h-6 rounded-full bg-slate-800/80 flex items-center justify-center text-slate-400 border border-slate-600 shadow-sm backdrop-blur-sm"><span className="text-sm font-light leading-none mb-0.5">+</span></div>
+                                                        )}
+                                                        {isDragOver && (
+                                                            <div className="text-yellow-500 font-bold text-xs animate-bounce mt-2">Bırak</div>
                                                         )}
                                                     </div>
                                                 )}
@@ -736,7 +912,7 @@
                             onMarkRead={handleMarkRead}
                         />
                     )}
-                    <div className="fixed bottom-4 left-4 text-[10px] text-slate-600 font-mono">{APP_VERSION}</div>
+                    <div className="fixed bottom-4 left-4 text-[10px] text-slate-600 font-mono tracking-widest">{APP_VERSION}</div>
                 </div>
             );
         };
