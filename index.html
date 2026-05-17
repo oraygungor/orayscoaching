@@ -107,11 +107,11 @@
             Trash2: (props) => <IconBase {...props}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></IconBase>,
             LogOut: (props) => <IconBase {...props}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></IconBase>,
             CheckCircle2: (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></IconBase>,
-            Scale: (props) => <IconBase {...props}><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></IconBase>,
             Copy: (props) => <IconBase {...props}><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></IconBase>,
             MoveRight: (props) => <IconBase {...props}><path d="M18 8L22 12L18 16"/><path d="M2 12H22"/></IconBase>,
             User: (props) => <IconBase {...props}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconBase>,
-            FileText: (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></IconBase>
+            FileText: (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></IconBase>,
+            Plus: (props) => <IconBase {...props}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></IconBase>
         };
 
         // --- HYROX WORKOUT TYPES ---
@@ -135,14 +135,6 @@
             partial: { label: 'Kısmen', class: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50', activeClass: 'bg-yellow-600 text-white' },
             missed: { label: 'Eksik', class: 'bg-red-500/20 text-red-400 border-red-500/50', activeClass: 'bg-red-600 text-white' },
             pending: { label: 'Plan', class: 'bg-slate-700/30 text-slate-400 border-slate-600', activeClass: 'bg-slate-600 text-white' }
-        };
-
-        const RPE_COLORS = {
-            1: "bg-slate-600", 2: "bg-slate-600", 3: "bg-slate-600", 
-            4: "bg-green-600", 5: "bg-green-600", 
-            6: "bg-yellow-600", 7: "bg-yellow-600", 
-            8: "bg-orange-600", 9: "bg-orange-600", 
-            10: "bg-red-600"
         };
 
         const LoginScreen = ({ onLogin }) => (
@@ -256,7 +248,9 @@
                                         <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block tracking-wider">Başlık</label>
                                         <input name="title" defaultValue={workout.title} className="w-full p-3.5 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none text-white font-medium placeholder-slate-600 transition-all shadow-inner" placeholder="Örn: 8x1000m Koşu veya Ağır Sled Push" readOnly={!canEditDetails} />
                                     </div>
-                                    <div className="grid grid-cols-3 gap-3">
+                                    
+                                    {/* Ağırlık bölümü silindi, grid-cols-2 yapıldı */}
+                                    <div className="grid grid-cols-2 gap-3">
                                         <div>
                                             <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block tracking-wider" title="Mesafe veya Tekrar Sayısı">Hacim</label>
                                             <div className="relative">
@@ -272,13 +266,6 @@
                                                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(z => <option key={z} value={z}>{z}</option>)}
                                                 </select>
                                                 <Icons.Gauge size={14} className="absolute left-3 top-4 text-slate-500" />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block tracking-wider">Ağırlık (KG)</label>
-                                            <div className="relative">
-                                                <input name="weight" defaultValue={workout.weight} className="w-full p-3.5 pl-9 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none text-white text-sm transition-all shadow-inner" placeholder="125kg" readOnly={!canEditDetails} />
-                                                <Icons.Scale size={14} className="absolute left-3 top-4 text-slate-500" />
                                             </div>
                                         </div>
                                     </div>
@@ -300,10 +287,12 @@
                                             <label className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest"><Icons.Dumbbell size={14} /> Sporcu Geri Bildirimi</label>
                                             {!isCoach && saveStatus === 'saved' && <span className="text-[10px] text-green-400 flex items-center gap-1 bg-green-500/10 px-2 py-0.5 rounded-full"><Icons.CheckCircle2 size={12} /> Kaydedildi</span>}
                                         </div>
+                                        
+                                        {/* Adminin sporcu notunu değiştirebilmesi için readOnly kaldırıldı ve name eklendi */}
                                         {!isCoach ? (
                                             <textarea value={localUserNote} onChange={(e) => setLocalUserNote(e.target.value)} onBlur={onUserNoteBlur} className="w-full bg-transparent border-0 p-0 text-white text-sm focus:ring-0 placeholder-slate-500 leading-relaxed resize-none min-h-[60px]" placeholder="Antrenman nasıl geçti? Pacing nasıldı? Notlarını buraya yaz..." />
                                         ) : (
-                                            <textarea name="userNote" defaultValue={workout.userNote} className="w-full bg-transparent border-0 p-0 text-white text-sm focus:ring-0 placeholder-slate-600 leading-relaxed resize-none min-h-[60px]" placeholder="Sporcu henüz not girmedi..." readOnly />
+                                            <textarea name="userNote" defaultValue={workout.userNote} className="w-full bg-transparent border-0 p-0 text-white text-sm focus:ring-0 placeholder-slate-600 leading-relaxed resize-none min-h-[60px]" placeholder="Sporcu henüz not girmedi. Coach olarak burayı düzenleyebilirsiniz..." />
                                         )}
                                     </div>
                                 </div>
@@ -343,7 +332,6 @@
             const [currentDate, setCurrentDate] = useState(new Date()); 
             const [workouts, setWorkouts] = useState({});
             const [selectedDate, setSelectedDate] = useState(null);
-            const [viewMode, setViewMode] = useState('month');
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [isLoading, setIsLoading] = useState(true);
             const [athleteList, setAthleteList] = useState([]);
@@ -407,514 +395,264 @@
 
             const handleLogout = () => { auth.signOut(); setSelectedAthleteId(null); setWorkouts({}); };
 
-            const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
-            const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay(); 
-            const startingDayIndex = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
-            const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
-
-            const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-            const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-            const prevYear = () => setCurrentDate(new Date(currentDate.getFullYear() - 1, currentDate.getMonth(), 1));
-            const nextYear = () => setCurrentDate(new Date(currentDate.getFullYear() + 1, currentDate.getMonth(), 1));
-
-            const getMonthStats = (year, monthIndex) => {
-                let stats = { completed: 0, partial: 0, missed: 0, pending: 0, hasNotification: false };
-                const monthStr = String(monthIndex + 1).padStart(2, '0');
-                const prefix = `${year}-${monthStr}-`;
-                
-                Object.keys(workouts).forEach(dateKey => {
-                    if (dateKey.startsWith(prefix)) {
-                        const workout = workouts[dateKey];
-                        const status = workout.status || 'pending';
-                        if (stats[status] !== undefined) {
-                            stats[status]++;
-                        }
-                        const showNotification = workout && (
-                            (isCoach && workout.hasUnreadUserNote) || 
-                            (!isCoach && workout.hasUnreadCoachNote)
-                        );
-                        if (showNotification) stats.hasNotification = true;
-                    }
-                });
-                return stats;
+            const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
+            const getFirstDayOfMonth = (year, month) => {
+                let day = new Date(year, month, 1).getDay();
+                return day === 0 ? 6 : day - 1; // Monday first
             };
 
-            const handleDateClick = (day) => {
-                const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                if (!isCoach && !workouts[dateStr]) return; 
-                setSelectedDate(dateStr);
-                setIsModalOpen(true);
-            };
+            const currentYear = currentDate.getFullYear();
+            const currentMonth = currentDate.getMonth();
+            const daysInMonth = getDaysInMonth(currentYear, currentMonth);
+            const firstDay = getFirstDayOfMonth(currentYear, currentMonth);
 
-            // --- DRAG AND DROP HANDLERS ---
-            const handleDragStart = (e, dateStr) => {
-                if (!isCoach || !workouts[dateStr]) {
-                    e.preventDefault();
-                    return;
-                }
-                setDraggedDate(dateStr);
-                // Set generic data for standard compliance, visual effect
-                e.dataTransfer.effectAllowed = "copyMove";
-                e.dataTransfer.setData("text/plain", dateStr);
-            };
+            const handlePrevMonth = () => setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
+            const handleNextMonth = () => setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
+            const handleToday = () => setCurrentDate(new Date());
 
-            const handleDragOver = (e, dateStr) => {
-                e.preventDefault(); // Necessary to allow dropping
-                if (dateStr !== dragOverDate) {
-                    setDragOverDate(dateStr);
-                }
-                // Optional: Change cursor based on modifier key
-                e.dataTransfer.dropEffect = (e.altKey || e.ctrlKey) ? "copy" : "move";
-            };
-
-            const handleDragLeave = () => {
-                setDragOverDate(null);
-            };
-
-            const handleDrop = async (e, targetDateStr) => {
+            const handleSaveWorkout = async (e, actionType, targetDate) => {
                 e.preventDefault();
-                setDragOverDate(null);
-
-                if (!draggedDate || draggedDate === targetDateStr) {
-                    setDraggedDate(null);
-                    return;
-                }
-
-                const sourceData = workouts[draggedDate];
-                if (!sourceData) return;
-
-                // Copy if modifier key is held
-                const isCopy = e.altKey || e.ctrlKey;
-
-                const targetDocId = `${selectedAthleteId}_${targetDateStr}`;
-                const sourceDocId = `${selectedAthleteId}_${draggedDate}`;
-
-                const batch = db.batch();
-                
-                // Clean up data before saving to new location
-                const { id, ...dataToMove } = sourceData;
-                
-                // Mark as updated by coach
-                dataToMove.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
-                dataToMove.hasUnreadCoachNote = true; // Alert athlete it was moved/copied
-
-                batch.set(db.collection("workouts").doc(targetDocId), dataToMove, { merge: true });
-
-                if (!isCopy) {
-                    batch.delete(db.collection("workouts").doc(sourceDocId));
-                }
-
-                try {
-                    await batch.commit();
-                } catch (err) {
-                    console.error("D&D Error:", err);
-                    alert("Taşıma işlemi başarısız oldu!");
-                }
-                setDraggedDate(null);
-            };
-
-
-            const handleMarkRead = async () => {
-                if (!selectedDate || !selectedAthleteId) return;
-                const docId = `${selectedAthleteId}_${selectedDate}`;
-                
-                const workout = workouts[selectedDate];
-                if (!workout) return;
-
-                if (isCoach && workout.hasUnreadUserNote) {
-                    try {
-                        const batch = db.batch();
-                        const workoutRef = db.collection("workouts").doc(docId);
-                        const userRef = db.collection("users").doc(selectedAthleteId);
-
-                        batch.set(workoutRef, { hasUnreadUserNote: false }, { merge: true });
-                        const currentCount = athleteList.find(a => a.uid === selectedAthleteId)?.unreadNoteCount || 0;
-                        if (currentCount > 0) {
-                            batch.set(userRef, { unreadNoteCount: firebase.firestore.FieldValue.increment(-1) }, { merge: true });
-                        }
-                        
-                        await batch.commit();
-                    } catch (err) { console.error("Error clearing coach notification", err); }
-                }
-                
-                if (!isCoach && workout.hasUnreadCoachNote) {
-                    try {
-                        await db.collection("workouts").doc(docId).set({ hasUnreadCoachNote: false }, { merge: true });
-                    } catch (err) { console.error("Error clearing athlete notification", err); }
-                }
-            };
-
-            const handleCoachSave = async (e, actionType, targetDate) => {
-                e.preventDefault();
-                if (!user || !selectedAthleteId) return;
                 const formData = new FormData(e.target);
-                const rpeVal = formData.get('rpe');
                 
-                const previousCoachNote = workouts[selectedDate]?.coachNote || "";
-                const newCoachNote = formData.get('coachNote') || "";
-                
-                const updatedWorkout = {
-                    athleteUid: selectedAthleteId,
-                    title: formData.get('title'),
-                    type: formData.get('type'),
-                    type2: formData.get('type2'), 
-                    volume: formData.get('volume'),
-                    weight: formData.get('weight'),
-                    rpe: rpeVal === "" ? null : Number(rpeVal),
-                    description: formData.get('description'),
+                const dataToSave = {
                     status: formData.get('status'),
-                    coachNote: newCoachNote,
-                    userNote: formData.get('userNote'),
-                    updatedBy: user.email,
+                    type: formData.get('type'),
+                    type2: formData.get('type2') !== 'none' ? formData.get('type2') : null,
+                    title: formData.get('title') || '',
+                    volume: formData.get('volume') || '',
+                    rpe: formData.get('rpe') || '',
+                    description: formData.get('description') || '',
+                    coachNote: formData.get('coachNote') || '',
+                    userNote: formData.get('userNote') || '', // Artık admin formu gönderdiğinde sporcu notu da kaydedilecek
+                    athleteUid: selectedAthleteId,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
 
-                // Notification logic
-                if (newCoachNote !== previousCoachNote || actionType !== 'update') {
-                    updatedWorkout.hasUnreadCoachNote = true;
-                }
-                
-                const batch = db.batch();
-                const targetDocId = `${selectedAthleteId}_${targetDate}`;
-                
-                batch.set(db.collection("workouts").doc(targetDocId), updatedWorkout, { merge: true });
+                const oldDocId = `${selectedAthleteId}_${selectedDate}`;
+                const newDocId = `${selectedAthleteId}_${targetDate}`;
 
-                // If moving to a new date, delete the old one
-                if (actionType === 'move' && targetDate !== selectedDate) {
-                    batch.delete(db.collection("workouts").doc(`${selectedAthleteId}_${selectedDate}`));
-                }
-
-                try { 
-                    await batch.commit();
-                    setIsModalOpen(false); 
-                } catch (err) { 
-                    alert("Kaydedilemedi! Lütfen bağlantınızı kontrol ediniz.");
-                    console.error("Coach save error:", err);
-                }
-            };
-
-            const handleAthleteNoteSave = async (noteText) => {
-                const workoutExists = workouts[selectedDate];
-                if (!workoutExists && !noteText.trim()) return;
-                
-                const docId = `${selectedAthleteId}_${selectedDate}`;
-                const workoutRef = db.collection("workouts").doc(docId);
-                const userRef = db.collection("users").doc(selectedAthleteId);
-                
                 try {
-                    const batch = db.batch();
-
-                    const payload = {
-                        userNote: noteText,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    };
-
-                    if (!workoutExists || !workoutExists.hasUnreadUserNote) {
-                        payload.hasUnreadUserNote = true;
-                        batch.set(userRef, { unreadNoteCount: firebase.firestore.FieldValue.increment(1) }, { merge: true });
-                    }
-
-                    if (!workoutExists) {
-                        payload.athleteUid = selectedAthleteId;
-                        payload.type = 'strength'; 
-                        payload.status = 'pending'; 
-                        payload.volume = ""; 
-                        payload.title = "Serbest Antrenman";
+                    if (actionType === 'move' && targetDate !== selectedDate) {
+                        await db.collection('workouts').doc(oldDocId).delete();
                     }
                     
-                    batch.set(workoutRef, payload, { merge: true });
-                    await batch.commit();
-                } catch (err) { 
-                    console.error("Otomatik kayıt hatası:", err); 
+                    await db.collection('workouts').doc(newDocId).set(dataToSave, { merge: true });
+                    setIsModalOpen(false);
+                } catch (error) {
+                    console.error("Error saving workout:", error);
+                    alert("Kayıt sırasında bir hata oluştu.");
                 }
             };
 
             const handleDeleteWorkout = async () => {
                 try {
-                    const docId = `${selectedAthleteId}_${selectedDate}`;
-                    await db.collection("workouts").doc(docId).delete();
+                    await db.collection('workouts').doc(`${selectedAthleteId}_${selectedDate}`).delete();
                     setIsModalOpen(false);
-                } catch (err) { alert("Silinemedi!"); }
-            };
-            
-            const handleSelectAthlete = (uid) => {
-                setSelectedAthleteId(uid);
+                } catch (error) {
+                    console.error("Error deleting workout:", error);
+                }
             };
 
-            if (isLoading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Yükleniyor...</div>;
+            const handleAutoSaveNote = async (note) => {
+                if (!selectedAthleteId || !selectedDate) return;
+                try {
+                    await db.collection('workouts').doc(`${selectedAthleteId}_${selectedDate}`).set({
+                        userNote: note,
+                        status: workouts[selectedDate]?.status === 'pending' ? 'partial' : workouts[selectedDate]?.status,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                } catch (error) {
+                    console.error("AutoSave Error:", error);
+                }
+            };
+
+            const handleDragStart = (e, date) => {
+                if (!isCoach || !workouts[date]) {
+                    e.preventDefault();
+                    return;
+                }
+                setDraggedDate(date);
+                e.dataTransfer.effectAllowed = 'move';
+                // Transparent image to hide default browser drag ghost
+                const img = new Image();
+                img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                e.dataTransfer.setDragImage(img, 0, 0);
+            };
+
+            const handleDragOver = (e, date) => {
+                e.preventDefault();
+                if (!isCoach || draggedDate === date) return;
+                setDragOverDate(date);
+            };
+
+            const handleDragLeave = (e) => {
+                e.preventDefault();
+                setDragOverDate(null);
+            };
+
+            const handleDrop = async (e, targetDate) => {
+                e.preventDefault();
+                setDragOverDate(null);
+                
+                if (!isCoach || !draggedDate || draggedDate === targetDate) {
+                    setDraggedDate(null);
+                    return;
+                }
+
+                const draggedWorkout = workouts[draggedDate];
+                const oldDocId = `${selectedAthleteId}_${draggedDate}`;
+                const newDocId = `${selectedAthleteId}_${targetDate}`;
+
+                try {
+                    // Start moving the document
+                    const { id, ...dataToMove } = draggedWorkout;
+                    await db.collection('workouts').doc(newDocId).set(dataToMove, { merge: true });
+                    await db.collection('workouts').doc(oldDocId).delete();
+                } catch (error) {
+                    console.error("Sürükle-bırak hatası:", error);
+                }
+                
+                setDraggedDate(null);
+            };
+
+            if (isLoading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><div className="w-12 h-12 border-4 border-slate-800 border-t-yellow-500 rounded-full animate-spin"></div></div>;
             if (!user) return <LoginScreen onLogin={handleGoogleLogin} />;
 
-            if (isCoach && !selectedAthleteId) {
-                return (
-                    <div className="min-h-screen bg-slate-950 text-slate-200 p-6 animate-in">
-                        <div className="max-w-2xl mx-auto">
-                            <div className="flex justify-between items-center mb-8">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-14 h-14 bg-gradient-to-tr from-yellow-500 to-amber-600 rounded-2xl flex items-center justify-center text-slate-950 font-black text-2xl shadow-xl shadow-yellow-900/30">HC</div>
-                                    <div>
-                                        <h1 className="text-3xl font-black text-white tracking-tight">Coach Portal</h1>
-                                        <p className="text-xs text-yellow-500 font-mono mt-0.5 tracking-wider">{APP_VERSION}</p>
-                                    </div>
-                                </div>
-                                <button onClick={handleLogout} className="bg-slate-800 p-3.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-all active:scale-95 shadow-md"><Icons.LogOut size={20} /></button>
-                            </div>
-                            
-                            <h2 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
-                                <Icons.User size={14}/> Atlet Listesi
-                            </h2>
-                            
-                            <div className="grid gap-4">
-                                {athleteList.length === 0 ? (
-                                    <div className="p-10 text-center border-2 border-dashed border-slate-800 rounded-3xl text-slate-500 font-medium">Henüz kayıtlı atlet yok.</div>
-                                ) : (
-                                    athleteList.map(athlete => (
-                                        <div key={athlete.uid} onClick={() => handleSelectAthlete(athlete.uid)} className="bg-slate-900/50 border border-slate-800 hover:border-yellow-600/50 p-4 rounded-2xl flex items-center justify-between cursor-pointer transition-all duration-300 hover:bg-slate-800 hover:shadow-lg hover:-translate-y-0.5 group relative backdrop-blur-sm">
-                                            <div className="flex items-center gap-4">
-                                                <div className="relative">
-                                                    <img src={athlete.photoURL || "https://via.placeholder.com/40"} className="w-14 h-14 rounded-full border-2 border-slate-700 group-hover:border-yellow-500 transition-colors object-cover" alt=""/>
-                                                    {(athlete.unreadNoteCount || 0) > 0 && (
-                                                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-slate-900 animate-pulse"></div>
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <h3 className="font-bold text-white text-lg tracking-tight">{athlete.displayName}</h3>
-                                                    <p className="text-xs text-slate-500 font-medium">{athlete.email}</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-4">
-                                                {(athlete.unreadNoteCount || 0) > 0 && (
-                                                    <div className="flex items-center gap-1.5 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20">
-                                                        <Icons.FileText size={12} className="text-amber-500"/>
-                                                        <span className="text-amber-500 text-xs font-bold">{athlete.unreadNoteCount} Yeni Not</span>
-                                                    </div>
-                                                )}
-                                                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-yellow-500/20 transition-colors">
-                                                    <Icons.ChevronRight className="text-slate-500 group-hover:text-yellow-500" size={18}/>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                );
-            }
+            const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+            const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD format based on local time
 
             return (
-                <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-yellow-500/30 pb-24 animate-in">
-                    <div className="sticky top-0 z-30 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800/80 shadow-md">
-                        <div className="max-w-md mx-auto px-4 pt-4 pb-3">
-                            <div className="flex justify-between items-center mb-5">
-                                <div className="flex items-center gap-3">
-                                    {isCoach ? (
-                                        <button onClick={() => setSelectedAthleteId(null)} className="flex items-center justify-center w-10 h-10 bg-slate-900 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-all border border-slate-800">
-                                            <Icons.ChevronLeft size={20} />
-                                        </button>
-                                    ) : (
-                                        <div className="w-10 h-10 bg-gradient-to-tr from-yellow-500 to-amber-600 rounded-xl flex items-center justify-center text-slate-950 font-black shadow-lg shadow-yellow-900/40">HC</div>
-                                    )}
-                                    
-                                    <div>
-                                        <h1 className="text-xl font-bold text-white leading-none tracking-tight">
-                                            {isCoach 
-                                                ? (athleteList.find(a => a.uid === selectedAthleteId)?.displayName || 'Atlet') 
-                                                : "Hyrox Coaching"}
-                                        </h1>
-                                        <p className="text-[10px] font-bold text-yellow-500 uppercase tracking-widest mt-1">
-                                            {isCoach ? 'Program Yönetimi' : user.displayName}
-                                        </p>
-                                    </div>
+                <div className="min-h-screen flex flex-col bg-slate-950 font-sans">
+                    {/* Header */}
+                    <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-30 shadow-md">
+                        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-gradient-to-tr from-yellow-500 to-amber-600 rounded-lg flex items-center justify-center text-slate-950 font-extrabold text-lg shadow-md">HC</div>
+                                <div className="hidden sm:block">
+                                    <h1 className="text-white font-bold tracking-tight leading-tight">Oray's Coaching</h1>
+                                    <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest">{isCoach ? 'Yönetici Paneli' : 'Sporcu Paneli'}</p>
                                 </div>
-                                {!isCoach && (
-                                    <button onClick={handleLogout} className="bg-slate-900 border border-slate-800 p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all"><Icons.LogOut size={18} /></button>
-                                )}
                             </div>
                             
-                            <div className="flex items-center justify-between bg-slate-900 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
-                                {viewMode === 'year' ? (
-                                    <>
-                                        <button onClick={prevYear} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronLeft size={20} /></button>
-                                        <h2 className="text-sm font-bold text-white tracking-wider uppercase">{currentDate.getFullYear()} İstatistikleri</h2>
-                                        <button onClick={nextYear} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronRight size={20} /></button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="flex gap-1">
-                                            <button onClick={() => setViewMode('year')} className="px-3 h-10 flex items-center justify-center rounded-xl hover:bg-yellow-500 hover:text-slate-950 text-yellow-500 transition-all font-bold text-[10px] uppercase tracking-widest gap-1 border border-yellow-500/30 bg-yellow-500/10"><Icons.Calendar size={14} /> YIL</button>
-                                            <button onClick={prevMonth} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronLeft size={20} /></button>
-                                        </div>
-                                        <h2 className="text-base font-bold text-white tracking-wide">{monthNames[currentDate.getMonth()]} <span className="text-slate-500 font-medium">{currentDate.getFullYear()}</span></h2>
-                                        <button onClick={nextMonth} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronRight size={20} /></button>
-                                    </>
+                            <div className="flex items-center gap-3">
+                                {isCoach && (
+                                    <select 
+                                        className="bg-slate-950 border border-slate-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-yellow-500"
+                                        value={selectedAthleteId || ""}
+                                        onChange={(e) => setSelectedAthleteId(e.target.value)}
+                                    >
+                                        <option value="" disabled>Sporcu Seçin</option>
+                                        {athleteList.map(a => (
+                                            <option key={a.uid} value={a.uid}>{a.displayName}</option>
+                                        ))}
+                                    </select>
                                 )}
-                            </div>
-                            {isCoach && viewMode === 'month' && (
-                                <div className="text-[9px] text-center mt-3 text-slate-500 font-medium tracking-widest uppercase flex items-center justify-center gap-1.5">
-                                    <Icons.Activity size={10} className="text-yellow-500"/>
-                                    Sürükle-bırak ile taşı • Kopyalamak için sürüklerken [Alt/Option]
+                                <div className="flex items-center gap-2 bg-slate-800/50 rounded-lg p-1 border border-slate-700">
+                                    <button onClick={handlePrevMonth} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded-md transition-colors"><Icons.ChevronLeft size={18} /></button>
+                                    <button onClick={handleToday} className="px-3 py-1 text-sm font-bold text-white hover:bg-slate-700 rounded-md transition-colors whitespace-nowrap">{monthNames[currentMonth]} {currentYear}</button>
+                                    <button onClick={handleNextMonth} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded-md transition-colors"><Icons.ChevronRight size={18} /></button>
                                 </div>
-                            )}
+                                <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-colors ml-1"><Icons.LogOut size={20} /></button>
+                            </div>
                         </div>
-                    </div>
+                    </header>
 
-                    <div className="max-w-md mx-auto px-3 mt-4">
-                        {viewMode === 'year' && (
-                            <div className="grid grid-cols-2 gap-3 pb-8">
-                                {monthNames.map((monthName, index) => {
-                                    const stats = getMonthStats(currentDate.getFullYear(), index);
-                                    const total = stats.completed + stats.partial + stats.missed + stats.pending;
-                                    
-                                    return (
-                                        <div key={monthName} onClick={() => {
-                                            setCurrentDate(new Date(currentDate.getFullYear(), index, 1));
-                                            setViewMode('month');
-                                        }} className="bg-slate-900 border border-slate-800 hover:border-yellow-500/50 p-4 rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group relative">
-                                            {stats.hasNotification && (
-                                                <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full z-20 shadow-lg shadow-red-500/50 animate-ping-slow"></div>
-                                            )}
-                                            {stats.hasNotification && (
-                                                <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full z-20 border border-slate-900"></div>
-                                            )}
-                                            <h3 className="text-white font-bold text-center mb-4 group-hover:text-yellow-400 transition-colors tracking-wide">{monthName}</h3>
-                                            
-                                            <div className="flex justify-between items-center mb-2 px-1">
-                                                <span className="text-green-500 font-bold text-sm bg-green-500/10 w-6 h-6 flex items-center justify-center rounded-full" title="Tamam">{stats.completed}</span>
-                                                <span className="text-yellow-500 font-bold text-sm bg-yellow-500/10 w-6 h-6 flex items-center justify-center rounded-full" title="Kısmen">{stats.partial}</span>
-                                                <span className="text-red-500 font-bold text-sm bg-red-500/10 w-6 h-6 flex items-center justify-center rounded-full" title="Eksik">{stats.missed}</span>
-                                                <span className="text-slate-400 font-bold text-sm bg-slate-800 w-6 h-6 flex items-center justify-center rounded-full" title="Plan">{stats.pending}</span>
-                                            </div>
-                                            
-                                            <div className="flex h-1.5 w-full rounded-full overflow-hidden bg-slate-950/50 mt-3 shadow-inner">
-                                                {total > 0 ? (
-                                                    <>
-                                                        <div style={{width: `${(stats.completed/total)*100}%`}} className="bg-green-500"></div>
-                                                        <div style={{width: `${(stats.partial/total)*100}%`}} className="bg-yellow-500"></div>
-                                                        <div style={{width: `${(stats.missed/total)*100}%`}} className="bg-red-500"></div>
-                                                        <div style={{width: `${(stats.pending/total)*100}%`}} className="bg-slate-500"></div>
-                                                    </>
-                                                ) : (
-                                                    <div className="w-full bg-slate-800"></div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                    {/* Main Content Area */}
+                    <main className="flex-1 max-w-7xl mx-auto w-full p-4 flex flex-col">
+                        {!selectedAthleteId && isCoach ? (
+                            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 animate-in">
+                                <div className="w-20 h-20 bg-slate-900 rounded-full flex items-center justify-center mb-4 border-2 border-dashed border-slate-700 text-slate-600"><Icons.User size={32} /></div>
+                                <h2 className="text-xl font-bold text-white mb-2">Sporcu Seçin</h2>
+                                <p className="text-slate-400 max-w-sm">Antrenman programını görüntülemek veya düzenlemek için yukarıdaki menüden bir sporcu seçin.</p>
                             </div>
-                        )}
-
-                        {viewMode === 'month' && (
-                            <>
-                                <div className="grid grid-cols-7 mb-2 bg-slate-900/50 rounded-xl py-2 border border-slate-800/50">
-                                    {["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"].map(day => (<div key={day} className="text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest">{day}</div>))}
+                        ) : (
+                            <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-xl animate-in">
+                                {/* Weekday Headers */}
+                                <div className="grid grid-cols-7 bg-slate-800/50 border-b border-slate-800">
+                                    {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map((day, i) => (
+                                        <div key={i} className="py-3 text-center text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">{day}</div>
+                                    ))}
                                 </div>
-                                <div className="grid grid-cols-7 gap-1.5 auto-rows-fr">
-                                    {Array.from({ length: startingDayIndex }).map((_, i) => (<div key={`empty-${i}`} className="min-h-[90px]"></div>))}
+                                
+                                {/* Calendar Grid */}
+                                <div className="grid grid-cols-7 auto-rows-fr bg-slate-900">
+                                    {Array.from({ length: firstDay }).map((_, i) => (
+                                        <div key={`empty-${i}`} className="min-h-[100px] border-b border-r border-slate-800/50 bg-slate-950/20 p-2 opacity-30"></div>
+                                    ))}
+                                    
                                     {Array.from({ length: daysInMonth }).map((_, i) => {
-                                        const day = i + 1;
-                                        const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                                        const dateNum = i + 1;
+                                        const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dateNum).padStart(2, '0')}`;
+                                        const isToday = dateStr === todayStr;
                                         const workout = workouts[dateStr];
-                                        const isToday = new Date().toDateString() === new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString();
-                                        const type1 = workout && workout.type && WORKOUT_TYPES[workout.type] ? WORKOUT_TYPES[workout.type] : WORKOUT_TYPES['strength'];
-                                        const type2Key = workout && workout.type2 && WORKOUT_TYPES[workout.type2] ? workout.type2 : null;
-                                        const type2 = type2Key ? WORKOUT_TYPES[type2Key] : null;
-                                        const status = workout ? (workout.status || 'pending') : null;
-                                        
-                                        const showNotification = workout && (
-                                            (isCoach && workout.hasUnreadUserNote) || 
-                                            (!isCoach && workout.hasUnreadCoachNote)
-                                        );
-
-                                        let containerBgClass = 'bg-slate-900/80'; 
-                                        let containerBorderClass = 'border-slate-800/80 hover:border-slate-600'; 
-
-                                        if (workout) {
-                                            if (type2) containerBgClass = 'bg-slate-900'; 
-                                            else containerBgClass = type1.bgColor;
-
-                                            if (status && status !== 'pending') containerBorderClass = STATUS_STYLES[status];
-                                            else containerBorderClass = `border ${type1.defaultBorder}`;
-                                        }
-
                                         const isDragged = draggedDate === dateStr;
                                         const isDragOver = dragOverDate === dateStr;
 
                                         return (
                                             <div 
-                                                key={day} 
+                                                key={dateStr}
+                                                onClick={() => { setSelectedDate(dateStr); setIsModalOpen(true); }}
                                                 draggable={isCoach && !!workout}
                                                 onDragStart={(e) => handleDragStart(e, dateStr)}
                                                 onDragOver={(e) => handleDragOver(e, dateStr)}
                                                 onDragLeave={handleDragLeave}
                                                 onDrop={(e) => handleDrop(e, dateStr)}
-                                                onClick={() => handleDateClick(day)} 
-                                                className={`relative min-h-[95px] sm:min-h-[105px] rounded-[14px] transition-all duration-200 cursor-pointer flex flex-col overflow-hidden group backdrop-blur-sm
-                                                ${containerBgClass} ${containerBorderClass} 
-                                                ${isToday ? 'ring-2 ring-yellow-500 ring-offset-2 ring-offset-slate-950 z-10' : ''}
-                                                ${isDragOver ? 'drag-active-target' : ''}
-                                                ${isDragged ? 'dragging-item' : 'hover:scale-[1.02] hover:shadow-lg hover:z-10'}
-                                                ${!workout && !isCoach ? 'opacity-30' : ''}
+                                                className={`min-h-[100px] sm:min-h-[120px] p-1.5 sm:p-2 border-b border-r border-slate-800/50 relative group cursor-pointer transition-all duration-200 
+                                                    ${isToday ? 'bg-slate-800/30' : 'hover:bg-slate-800/40'}
+                                                    ${isDragOver ? 'drag-active-target bg-slate-800' : ''}
+                                                    ${isDragged ? 'dragging-item' : ''}
                                                 `}
                                             >
-                                                {showNotification && (
-                                                    <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full z-20 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse"></div>
-                                                )}
-
-                                                {workout && type2 && (
-                                                    <>
-                                                        <div className={`absolute inset-0 w-full h-full z-0 ${type1.bgRaw} opacity-40 [clip-path:polygon(0_0,100%_0,0_100%)]`}></div>
-                                                        <div className={`absolute inset-0 w-full h-full z-0 ${type2.bgRaw} opacity-40 [clip-path:polygon(100%_0,100%_100%,0_100%)]`}></div>
-                                                    </>
-                                                )}
-                                                
-                                                <div className="relative z-10 flex justify-between items-start mb-1 p-2 pb-0">
-                                                    <span className={`text-xs font-bold ${isToday ? 'text-yellow-400 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]' : 'text-slate-400 group-hover:text-slate-300'}`}>{day}</span>
-                                                    {workout && (<div className="flex gap-0.5 opacity-90 filter drop-shadow-md bg-slate-950/40 px-1 py-0.5 rounded-md backdrop-blur-md border border-white/5">{type1.icon}{type2 && type2.icon}</div>)}
+                                                <div className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center mb-1 transition-colors
+                                                    ${isToday ? 'bg-yellow-500 text-slate-900' : 'text-slate-500 group-hover:text-slate-300'}
+                                                `}>
+                                                    {dateNum}
                                                 </div>
-                                                
+
                                                 {workout ? (
-                                                    <div className="relative z-10 flex flex-col flex-1 justify-center gap-1.5 p-1.5 pt-0">
-                                                        <div className="text-center">
-                                                            <span className={`text-[17px] font-black tracking-tighter leading-none block drop-shadow-md ${type1.textColor}`}>
-                                                                {workout.volume || '-'}
+                                                    <div className={`mt-1 rounded-lg p-2 text-xs border border-transparent shadow-sm flex flex-col gap-1 transition-all group-hover:scale-[1.02]
+                                                        ${WORKOUT_TYPES[workout.type]?.bgColor || 'bg-slate-800'}
+                                                        ${STATUS_STYLES[workout.status || 'pending']}
+                                                    `}>
+                                                        <div className="flex items-center gap-1.5 opacity-90 truncate">
+                                                            {WORKOUT_TYPES[workout.type]?.icon}
+                                                            <span className={`font-bold truncate ${WORKOUT_TYPES[workout.type]?.textColor || 'text-white'}`}>
+                                                                {WORKOUT_TYPES[workout.type]?.label}
                                                             </span>
                                                         </div>
-                                                        <div className="flex justify-center gap-1 flex-wrap">
-                                                            {workout.rpe && (<span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm text-white border border-white/10 ${RPE_COLORS[workout.rpe] || 'bg-slate-700'}`}>R{workout.rpe}</span>)}
-                                                            {workout.weight && (<span className="text-[9px] font-bold bg-slate-950/60 text-white/90 px-1.5 py-0.5 rounded shadow-sm border border-white/5 backdrop-blur-sm">{workout.weight}</span>)}
-                                                        </div>
+                                                        {workout.title && <div className="text-[10px] text-slate-300 truncate font-medium">{workout.title}</div>}
+                                                        {workout.volume && <div className="text-[10px] text-slate-400 truncate opacity-80 mt-0.5">{workout.volume}</div>}
+                                                        {workout.coachNote && <div className="absolute top-2 right-2 text-yellow-500 animate-pulse" title="Coach Notu Var"><Icons.Zap size={10} /></div>}
                                                     </div>
                                                 ) : (
-                                                    <div className="flex-1 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        {isCoach && !isDragged && (
-                                                            <div className="w-6 h-6 rounded-full bg-slate-800/80 flex items-center justify-center text-slate-400 border border-slate-600 shadow-sm backdrop-blur-sm"><span className="text-sm font-light leading-none mb-0.5">+</span></div>
-                                                        )}
-                                                        {isDragOver && (
-                                                            <div className="text-yellow-500 font-bold text-xs animate-bounce mt-2">Bırak</div>
-                                                        )}
-                                                    </div>
+                                                    isCoach && <div className="absolute inset-0 m-auto w-8 h-8 rounded-full bg-slate-800/50 text-slate-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity scale-75 group-hover:scale-100"><Icons.Plus size={16} /></div>
                                                 )}
                                             </div>
                                         );
                                     })}
+
+                                    {/* Fill remaining empty cells */}
+                                    {Array.from({ length: (7 - ((firstDay + daysInMonth) % 7)) % 7 }).map((_, i) => (
+                                        <div key={`empty-end-${i}`} className="min-h-[100px] border-b border-r border-slate-800/50 bg-slate-950/20 p-2 opacity-30"></div>
+                                    ))}
                                 </div>
-                            </>
+                            </div>
                         )}
-                    </div>
-                    {isModalOpen && (
+                    </main>
+
+                    {/* Modals */}
+                    {isModalOpen && selectedDate && (
                         <WorkoutModal 
-                            selectedDate={selectedDate} 
-                            workout={workouts[selectedDate] || {}} 
+                            selectedDate={selectedDate}
+                            workout={workouts[selectedDate] || {}}
                             isCoach={isCoach}
-                            onClose={() => setIsModalOpen(false)}
-                            onSave={handleCoachSave}
-                            onDelete={handleDeleteWorkout}
-                            onAutoSave={handleAthleteNoteSave}
                             hasWorkout={!!workouts[selectedDate]}
-                            onMarkRead={handleMarkRead}
+                            onClose={() => setIsModalOpen(false)}
+                            onSave={handleSaveWorkout}
+                            onDelete={handleDeleteWorkout}
+                            onAutoSave={handleAutoSaveNote}
                         />
                     )}
-                    <div className="fixed bottom-4 left-4 text-[10px] text-slate-600 font-mono tracking-widest">{APP_VERSION}</div>
                 </div>
             );
         };
