@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Oray's Hyrox Coaching</title>
     
     <!-- Tailwind CSS -->
@@ -21,48 +21,54 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
     <style>
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .animate-in { animation: fadeIn 0.3s ease-out; }
-        .slide-in { animation: slideUp 0.3s ease-out; }
+        :root {
+            --safe-area-inset-bottom: env(safe-area-inset-bottom);
+        }
         
-        @keyframes pulse-yellow {
-            0% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7); }
-            70% { box-shadow: 0 0 0 6px rgba(234, 179, 8, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
+        body {
+            -webkit-tap-highlight-color: transparent;
+            background-color: #020617; /* slate-950 */
         }
-        .saving-pulse { animation: pulse-yellow 1s infinite; }
 
-        @keyframes ping-slow {
-            75%, 100% { transform: scale(2); opacity: 0; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        
+        /* Mobile Bottom Sheet Animation */
+        @keyframes slideUpSheet {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
-        .animate-ping-slow { animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+        .slide-up-sheet { animation: slideUpSheet 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
+        /* Hide scrollbar for clean UI on mobile lists */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Smooth D&D transitions */
-        .drag-active-target {
-            transform: scale(1.03);
-            z-index: 20;
-            box-shadow: 0 0 20px rgba(234, 179, 8, 0.4);
-            border-color: #eab308 !important;
+        /* Pulse for saving */
+        @keyframes pulse-border {
+            0% { border-color: rgba(34, 197, 94, 0.2); }
+            50% { border-color: rgba(34, 197, 94, 1); }
+            100% { border-color: rgba(34, 197, 94, 0.2); }
         }
-        .dragging-item {
-            opacity: 0.4;
-            filter: grayscale(100%);
-            transform: scale(0.95);
-        }
+        .border-saving { animation: pulse-border 1.5s infinite; }
+        
+        /* D&D */
+        .drag-over { border: 2px dashed #eab308 !important; background: rgba(234,179,8,0.1) !important; }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-200">
+<body class="text-slate-200 antialiased font-sans selection:bg-yellow-500/30">
     <div id="root"></div>
 
     <script type="text/babel">
         // --- CONFIGURATION ---
         const ADMIN_EMAIL = "oray.gungor@gmail.com";
-        const APP_VERSION = "v1.5-hyrox-pro";
+        const APP_VERSION = "v2.0-mobile-pro";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCu-H_z8dwFV7tc4uS1o79SDD-Cm7Hvei4",
@@ -79,12 +85,10 @@
         }
         const auth = firebase.auth();
         const db = firebase.firestore();
-
-        // --- ICONS SYSTEM ---
         const { useState, useEffect, useRef } = React;
 
-        const IconBase = ({ size = 24, children, ...props }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        const IconBase = ({ size = 24, children, className = "", ...props }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
                 {children}
             </svg>
         );
@@ -93,10 +97,7 @@
             ChevronLeft: (props) => <IconBase {...props}><path d="m15 18-6-6 6-6"/></IconBase>,
             ChevronRight: (props) => <IconBase {...props}><path d="m9 18 6-6-6-6"/></IconBase>,
             X: (props) => <IconBase {...props}><path d="M18 6 6 18"/><path d="m6 6 18 18"/></IconBase>,
-            XCircle: (props) => <IconBase {...props}><circle cx="12" cy="12" r="10" /><path d="m15 9-6 6"/><path d="m9 9 6 6"/></IconBase>,
             Activity: (props) => <IconBase {...props}><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></IconBase>,
-            TrendingUp: (props) => <IconBase {...props}><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></IconBase>,
-            Heart: (props) => <IconBase {...props}><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></IconBase>,
             Calendar: (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></IconBase>,
             MapPin: (props) => <IconBase {...props}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></IconBase>,
             Zap: (props) => <IconBase {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></IconBase>,
@@ -110,215 +111,242 @@
             Copy: (props) => <IconBase {...props}><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></IconBase>,
             MoveRight: (props) => <IconBase {...props}><path d="M18 8L22 12L18 16"/><path d="M2 12H22"/></IconBase>,
             User: (props) => <IconBase {...props}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconBase>,
-            FileText: (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></IconBase>,
             Plus: (props) => <IconBase {...props}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></IconBase>
         };
 
-        // --- HYROX WORKOUT TYPES ---
         const WORKOUT_TYPES = {
-            run: { label: "Koşu", bgColor: "bg-blue-900/40", bgRaw: "bg-blue-900", textColor: "text-blue-100", defaultBorder: "border-blue-700/50", icon: <Icons.MapPin size={11} className="text-blue-400" /> },
-            threshold: { label: "Threshold/Interval", bgColor: "bg-orange-900/40", bgRaw: "bg-orange-900", textColor: "text-orange-100", defaultBorder: "border-orange-700/50", icon: <Icons.Timer size={11} className="text-orange-400" /> },
-            hyrox_interval: { label: "Hyrox Interval", bgColor: "bg-amber-900/40", bgRaw: "bg-amber-900", textColor: "text-amber-100", defaultBorder: "border-amber-700/50", icon: <Icons.Zap size={11} className="text-amber-400" /> },
-            simulation: { label: "Hyrox Simülasyon", bgColor: "bg-yellow-600/40", bgRaw: "bg-yellow-600", textColor: "text-yellow-100", defaultBorder: "border-yellow-500/50", icon: <Icons.Flag size={11} className="text-yellow-400" /> },
-            strength: { label: "Genel Kuvvet", bgColor: "bg-zinc-800", bgRaw: "bg-zinc-800", textColor: "text-zinc-200", defaultBorder: "border-zinc-600", icon: <Icons.Dumbbell size={11} className="text-zinc-400" /> }
-        };
-
-        const STATUS_STYLES = {
-            completed: "!border-4 !border-green-500 shadow-[0_0_15px_-3px_rgba(34,197,94,0.6)]",
-            partial: "!border-4 !border-yellow-500 shadow-[0_0_15px_-3px_rgba(234,179,8,0.3)]",
-            missed: "!border-4 !border-red-500 shadow-[0_0_15px_-3px_rgba(220,38,38,0.3)]",
-            pending: "border"
+            run: { label: "Koşu", color: "bg-blue-500", bgLight: "bg-blue-500/10", text: "text-blue-400", border: "border-blue-500/30", icon: <Icons.MapPin size={14} /> },
+            threshold: { label: "Threshold", color: "bg-orange-500", bgLight: "bg-orange-500/10", text: "text-orange-400", border: "border-orange-500/30", icon: <Icons.Timer size={14} /> },
+            hyrox_interval: { label: "Hyrox Int.", color: "bg-amber-500", bgLight: "bg-amber-500/10", text: "text-amber-400", border: "border-amber-500/30", icon: <Icons.Zap size={14} /> },
+            simulation: { label: "Simülasyon", color: "bg-yellow-500", bgLight: "bg-yellow-500/10", text: "text-yellow-400", border: "border-yellow-500/30", icon: <Icons.Flag size={14} /> },
+            strength: { label: "Kuvvet", color: "bg-zinc-400", bgLight: "bg-zinc-400/10", text: "text-zinc-300", border: "border-zinc-500/30", icon: <Icons.Dumbbell size={14} /> }
         };
 
         const STATUS_CONFIG = {
-            completed: { label: 'Tamam', class: 'bg-green-500/20 text-green-400 border-green-500/50', activeClass: 'bg-green-600 text-white' },
-            partial: { label: 'Kısmen', class: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50', activeClass: 'bg-yellow-600 text-white' },
-            missed: { label: 'Eksik', class: 'bg-red-500/20 text-red-400 border-red-500/50', activeClass: 'bg-red-600 text-white' },
-            pending: { label: 'Plan', class: 'bg-slate-700/30 text-slate-400 border-slate-600', activeClass: 'bg-slate-600 text-white' }
+            completed: { label: 'Tamam', class: 'bg-green-500/10 text-green-500 border-green-500/30', active: 'bg-green-600 text-white border-green-500', dot: 'bg-green-500' },
+            partial: { label: 'Kısmen', class: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30', active: 'bg-yellow-600 text-white border-yellow-500', dot: 'bg-yellow-500' },
+            missed: { label: 'Eksik', class: 'bg-red-500/10 text-red-500 border-red-500/30', active: 'bg-red-600 text-white border-red-500', dot: 'bg-red-500' },
+            pending: { label: 'Planlı', class: 'bg-slate-800 text-slate-400 border-slate-700', active: 'bg-slate-600 text-white border-slate-500', dot: 'bg-slate-500' }
         };
 
         const LoginScreen = ({ onLogin }) => (
-            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 text-center animate-in">
-                <div className="w-20 h-20 bg-gradient-to-tr from-yellow-500 to-amber-600 rounded-3xl flex items-center justify-center text-slate-950 font-extrabold text-3xl shadow-2xl shadow-yellow-900/50 transform rotate-6 mb-8 hover:scale-105 transition-transform duration-300">HC</div>
-                <h1 className="text-4xl font-black text-white mb-2 tracking-tight drop-shadow-md">Oray's Hyrox Coaching</h1>
-                <p className="text-slate-400 mb-8 max-w-xs mx-auto">Hyrox atletleri için kişiselleştirilmiş performans programı.</p>
-                <button onClick={onLogin} className="flex items-center gap-3 bg-white text-slate-900 px-8 py-4 rounded-xl font-bold hover:bg-slate-100 transition-all active:scale-95 shadow-xl hover:shadow-yellow-500/20">Google ile Giriş Yap</button>
+            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center animate-fade-in relative overflow-hidden">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="w-24 h-24 bg-gradient-to-tr from-yellow-400 to-amber-600 rounded-[2rem] flex items-center justify-center text-slate-950 font-black text-4xl shadow-2xl shadow-yellow-900/50 transform rotate-6 mb-10">HC</div>
+                <h1 className="text-4xl sm:text-5xl font-black text-white mb-4 tracking-tight">Oray's<br/><span className="text-yellow-500">Hyrox</span> Coaching</h1>
+                <p className="text-slate-400 mb-12 text-lg max-w-sm">Performansını zirveye taşımak için özel planlanmış antrenman programın.</p>
+                <button onClick={onLogin} className="flex items-center justify-center gap-3 w-full max-w-sm bg-white text-slate-900 px-6 py-4 rounded-2xl font-bold text-lg hover:bg-slate-100 active:scale-95 transition-all shadow-xl shadow-white/5">
+                    Google ile Giriş Yap
+                </button>
             </div>
         );
 
-        const WorkoutModal = ({ selectedDate, workout = {}, isCoach, onClose, onSave, onDelete, onAutoSave, hasWorkout, onMarkRead }) => {
+        const AthleteSelector = ({ athletes, onSelect }) => (
+            <div className="flex-1 w-full max-w-4xl mx-auto p-4 sm:p-6 animate-fade-in">
+                <div className="mb-6 flex items-center justify-between">
+                    <div>
+                        <h2 className="text-2xl font-bold text-white tracking-tight">Sporcularınız</h2>
+                        <p className="text-slate-400 text-sm mt-1">Takvimini görüntülemek için bir sporcu seçin.</p>
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {athletes.map(athlete => (
+                        <button key={athlete.uid} onClick={() => onSelect(athlete.uid)} className="bg-slate-900 p-4 rounded-2xl border border-slate-800 hover:border-yellow-500/50 transition-all flex items-center gap-4 active:scale-95 text-left group">
+                            <div className="w-14 h-14 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0 group-hover:border-yellow-500/50 transition-colors">
+                                {athlete.photoURL ? <img src={athlete.photoURL} alt={athlete.displayName} className="w-full h-full object-cover" /> : <Icons.User className="text-slate-500" />}
+                            </div>
+                            <div className="flex-1 overflow-hidden">
+                                <h3 className="text-white font-bold text-lg truncate">{athlete.displayName || "İsimsiz Sporcu"}</h3>
+                                <p className="text-sm text-slate-500 truncate">{athlete.email}</p>
+                            </div>
+                            <Icons.ChevronRight className="text-slate-600 group-hover:text-yellow-500 transition-colors flex-shrink-0" />
+                        </button>
+                    ))}
+                    {athletes.length === 0 && (
+                        <div className="col-span-full text-center py-12 text-slate-500 bg-slate-900/50 rounded-2xl border border-slate-800 border-dashed">
+                            Henüz kayıtlı sporcu bulunmuyor.
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+
+        const WorkoutModal = ({ selectedDate, workout = {}, isCoach, onClose, onSave, onDelete }) => {
             const [localUserNote, setLocalUserNote] = useState(workout.userNote || "");
             const [saveStatus, setSaveStatus] = useState("idle");
             const [deleteConfirm, setDeleteConfirm] = useState(false);
             const [modalDate, setModalDate] = useState(selectedDate);
-            const [actionType, setActionType] = useState('update'); // update, move, copy
+            const [actionType, setActionType] = useState('update');
 
-            useEffect(() => { setLocalUserNote(workout.userNote || ""); }, [workout.userNote]);
-            useEffect(() => { setModalDate(selectedDate); }, [selectedDate]);
-            
-            useEffect(() => {
-                if (onMarkRead) onMarkRead();
-            }, []);
+            // Format date for display: "15 Mayıs 2026, Cuma"
+            const dateObj = new Date(selectedDate);
+            const displayDate = dateObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' });
 
-            const onUserNoteBlur = () => {
+            const handleNoteBlur = async () => {
                 if (localUserNote !== (workout.userNote || "")) {
                     setSaveStatus("saving");
-                    onAutoSave(localUserNote).then(() => {
+                    try {
+                        const statusToSave = workout.status === 'pending' || !workout.status ? 'partial' : workout.status;
+                        await db.collection('workouts').doc(`${workout.athleteUid}_${selectedDate}`).set({
+                            userNote: localUserNote,
+                            status: statusToSave,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        }, { merge: true });
                         setSaveStatus("saved");
-                        setTimeout(() => setSaveStatus("idle"), 2000);
-                    });
+                        setTimeout(() => setSaveStatus("idle"), 2500);
+                    } catch (e) {
+                        console.error(e);
+                        setSaveStatus("idle");
+                    }
                 }
             };
 
-            const handleDeleteClick = (e) => {
-                e.preventDefault(); e.stopPropagation();
-                if (deleteConfirm) onDelete(); else { setDeleteConfirm(true); setTimeout(() => setDeleteConfirm(false), 3000); }
-            };
-
-            const handleFormSubmit = (e) => {
-                onSave(e, actionType, modalDate);
-            };
-
             const canEditDetails = isCoach; 
-            const canEditStatus = isCoach; 
             const dateChanged = modalDate !== selectedDate;
 
             return (
-                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in">
-                    <div className="bg-slate-900 w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl border border-slate-700 shadow-2xl shadow-black overflow-hidden flex flex-col max-h-[95vh] slide-in">
-                        <div className="bg-slate-800/80 p-4 border-b border-slate-700 flex justify-between items-center sticky top-0 z-10 backdrop-blur-xl">
-                            <div className="flex items-center gap-3 flex-1">
-                                {hasWorkout && isCoach && (
-                                    <button type="button" onClick={handleDeleteClick} className={`p-2 rounded-xl transition-all border mr-1 group flex items-center gap-2 ${deleteConfirm ? "bg-red-600 text-white border-red-600 px-3 shadow-lg shadow-red-600/30" : "bg-slate-900 hover:bg-red-500/10 text-slate-400 hover:text-red-500 border-slate-700"}`} title="Sil">
-                                        <Icons.Trash2 size={18} /> {deleteConfirm && <span className="text-xs font-bold whitespace-nowrap">Sil?</span>}
+                <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center animate-fade-in">
+                    {/* Backdrop */}
+                    <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={onClose}></div>
+                    
+                    {/* Modal Content - Bottom Sheet on Mobile, Centered on Desktop */}
+                    <div className="bg-slate-900 w-full sm:max-w-xl rounded-t-3xl sm:rounded-3xl shadow-2xl relative z-10 flex flex-col max-h-[90vh] sm:max-h-[85vh] slide-up-sheet border sm:border-slate-700 border-transparent border-t-slate-700 pb-[env(safe-area-inset-bottom)]">
+                        
+                        {/* Mobile Drag Indicator */}
+                        <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mt-3 mb-1 sm:hidden"></div>
+                        
+                        {/* Header */}
+                        <div className="px-5 py-4 border-b border-slate-800 flex justify-between items-center sticky top-0 bg-slate-900 rounded-t-3xl sm:rounded-t-3xl z-20">
+                            <div className="flex-1">
+                                {isCoach ? (
+                                    <input 
+                                        type="date" 
+                                        value={modalDate}
+                                        onChange={(e) => setModalDate(e.target.value)}
+                                        className="bg-transparent text-white font-bold outline-none w-full text-lg [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]"
+                                        required
+                                    />
+                                ) : (
+                                    <h2 className="text-xl font-bold text-white tracking-tight">{displayDate}</h2>
+                                )}
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                                {workout.id && isCoach && (
+                                    <button type="button" onClick={() => { if(deleteConfirm) onDelete(); else { setDeleteConfirm(true); setTimeout(() => setDeleteConfirm(false), 3000); } }} 
+                                            className={`p-2 rounded-xl transition-all ${deleteConfirm ? "bg-red-600 text-white px-4 font-bold text-sm" : "bg-slate-800 text-slate-400 hover:text-red-500"}`}>
+                                        {deleteConfirm ? "Sil" : <Icons.Trash2 size={20} />}
                                     </button>
                                 )}
-                                <div className="flex-1">
-                                    {isCoach ? (
-                                        <div className="flex items-center bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 focus-within:border-yellow-500 focus-within:ring-1 focus-within:ring-yellow-500 transition-all max-w-[200px]">
-                                            <Icons.Calendar size={14} className="text-yellow-500 mr-2 opacity-80" />
-                                            <input 
-                                                type="date" 
-                                                value={modalDate}
-                                                onChange={(e) => setModalDate(e.target.value)}
-                                                className="bg-transparent text-white font-bold outline-none w-full text-sm [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] [&::-webkit-calendar-picker-indicator]:opacity-50 hover:[&::-webkit-calendar-picker-indicator]:opacity-100 cursor-pointer"
-                                                required
-                                            />
-                                        </div>
-                                    ) : (
-                                        <div>
-                                            <div className="flex items-center gap-2 text-yellow-500 mb-0.5"><Icons.Calendar size={14} /><span className="text-xs font-bold tracking-widest uppercase opacity-80">{selectedDate.split('-')[0]}</span></div>
-                                            <h2 className="text-lg font-bold text-white tracking-tight">{selectedDate.split('-').reverse().join('.')}</h2>
-                                        </div>
-                                    )}
-                                </div>
+                                <button type="button" onClick={onClose} className="p-2 bg-slate-800 text-slate-400 rounded-xl hover:text-white transition-colors">
+                                    <Icons.X size={20} />
+                                </button>
                             </div>
-                            <button type="button" onClick={onClose} className="text-slate-400 hover:text-white p-2 transition-colors ml-2 bg-slate-900 rounded-xl border border-slate-700 hover:border-slate-500"><Icons.X size={20} /></button>
                         </div>
 
-                        <div className="p-5 overflow-y-auto custom-scrollbar bg-gradient-to-b from-slate-900 to-slate-950">
-                            <form id="workoutForm" onSubmit={handleFormSubmit} className="space-y-6">
-                                <div className="flex gap-2 bg-slate-950/50 p-1.5 rounded-2xl border border-slate-800">
+                        {/* Scrollable Form Body */}
+                        <div className="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+                            <form id="workoutForm" onSubmit={(e) => onSave(e, actionType, modalDate)} className="space-y-6">
+                                
+                                {/* Status Selector */}
+                                <div className="flex gap-2">
                                     {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-                                        <label key={key} className="flex-1 cursor-pointer group relative">
-                                            <input type="radio" name="status" value={key} defaultChecked={workout.status === key || (!workout.status && key === 'pending')} className="peer sr-only" disabled={!canEditStatus} />
-                                            <div className={`text-center py-2.5 rounded-xl text-xs font-bold transition-all duration-300 border ${config.class} peer-checked:${config.activeClass} peer-checked:shadow-lg peer-checked:border-transparent opacity-60 peer-checked:opacity-100 hover:opacity-100 ${!canEditStatus ? 'opacity-40 cursor-not-allowed' : ''}`}>{config.label}</div>
+                                        <label key={key} className="flex-1 cursor-pointer relative">
+                                            <input type="radio" name="status" value={key} defaultChecked={workout.status === key || (!workout.status && key === 'pending')} className="peer sr-only" disabled={!isCoach} />
+                                            <div className={`text-center py-3 rounded-xl text-xs sm:text-sm font-bold transition-all border ${config.class} peer-checked:${config.active} opacity-50 peer-checked:opacity-100 ${!isCoach ? 'cursor-not-allowed' : ''}`}>
+                                                {config.label}
+                                            </div>
                                         </label>
                                     ))}
                                 </div>
 
+                                {/* Details Grid */}
                                 <div className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block tracking-wider">1. Blok / Hareket</label>
-                                            <select name="type" defaultValue={workout.type || ""} className="w-full p-3.5 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none text-white text-sm transition-all shadow-inner" disabled={!canEditDetails} required>
-                                                <option value="" disabled>-- Seçiniz --</option>
-                                                {Object.entries(WORKOUT_TYPES).map(([key, val]) => (<option key={key} value={key}>{val.label}</option>))}
+                                            <label className="text-xs font-bold text-slate-500 mb-1.5 block">Hareket 1</label>
+                                            <select name="type" defaultValue={workout.type || ""} className="w-full p-3.5 bg-slate-950 border border-slate-800 rounded-xl focus:border-yellow-500 outline-none text-white text-base sm:text-sm appearance-none" disabled={!canEditDetails} required>
+                                                <option value="" disabled>Seçiniz</option>
+                                                {Object.entries(WORKOUT_TYPES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block tracking-wider">2. Blok / Hareket</label>
-                                            <select name="type2" defaultValue={workout.type2 || "none"} className="w-full p-3.5 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none text-white text-sm transition-all shadow-inner" disabled={!canEditDetails}>
-                                                <option value="none">-- Yok --</option>
-                                                {Object.entries(WORKOUT_TYPES).map(([key, val]) => (<option key={key} value={key}>{val.label}</option>))}
+                                            <label className="text-xs font-bold text-slate-500 mb-1.5 block">Hareket 2</label>
+                                            <select name="type2" defaultValue={workout.type2 || "none"} className="w-full p-3.5 bg-slate-950 border border-slate-800 rounded-xl focus:border-yellow-500 outline-none text-white text-base sm:text-sm appearance-none" disabled={!canEditDetails}>
+                                                <option value="none">Yok</option>
+                                                {Object.entries(WORKOUT_TYPES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                                             </select>
                                         </div>
                                     </div>
+
                                     <div>
-                                        <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block tracking-wider">Başlık</label>
-                                        <input name="title" defaultValue={workout.title} className="w-full p-3.5 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none text-white font-medium placeholder-slate-600 transition-all shadow-inner" placeholder="Örn: 8x1000m Koşu veya Ağır Sled Push" readOnly={!canEditDetails} />
+                                        <label className="text-xs font-bold text-slate-500 mb-1.5 block">Başlık</label>
+                                        <input name="title" defaultValue={workout.title} className="w-full p-3.5 bg-slate-950 border border-slate-800 rounded-xl focus:border-yellow-500 outline-none text-white text-base sm:text-sm" placeholder="Örn: 8x1000m Koşu" readOnly={!canEditDetails} />
                                     </div>
                                     
-                                    {/* Ağırlık bölümü silindi, grid-cols-2 yapıldı */}
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block tracking-wider" title="Mesafe veya Tekrar Sayısı">Hacim</label>
+                                            <label className="text-xs font-bold text-slate-500 mb-1.5 block">Hacim (Mesafe/Tekrar)</label>
                                             <div className="relative">
-                                                <input name="volume" defaultValue={workout.volume} className="w-full p-3.5 pl-9 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none text-white text-sm transition-all shadow-inner" placeholder="Örn: 5km" readOnly={!canEditDetails} />
-                                                <Icons.Activity size={14} className="absolute left-3 top-4 text-slate-500" />
+                                                <input name="volume" defaultValue={workout.volume} className="w-full p-3.5 pl-10 bg-slate-950 border border-slate-800 rounded-xl focus:border-yellow-500 outline-none text-white text-base sm:text-sm" placeholder="Örn: 5km" readOnly={!canEditDetails} />
+                                                <Icons.Activity size={16} className="absolute left-3.5 top-4 text-slate-500" />
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block tracking-wider">RPE (1-10)</label>
+                                            <label className="text-xs font-bold text-slate-500 mb-1.5 block">RPE (Zorluk 1-10)</label>
                                             <div className="relative">
-                                                <select name="rpe" defaultValue={workout.rpe || ""} className="w-full p-3.5 pl-9 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none text-white text-sm appearance-none transition-all shadow-inner" disabled={!canEditDetails}>
+                                                <select name="rpe" defaultValue={workout.rpe || ""} className="w-full p-3.5 pl-10 bg-slate-950 border border-slate-800 rounded-xl focus:border-yellow-500 outline-none text-white text-base sm:text-sm appearance-none" disabled={!canEditDetails}>
                                                     <option value="">--</option>
-                                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(z => <option key={z} value={z}>{z}</option>)}
+                                                    {[1,2,3,4,5,6,7,8,9,10].map(z => <option key={z} value={z}>{z}</option>)}
                                                 </select>
-                                                <Icons.Gauge size={14} className="absolute left-3 top-4 text-slate-500" />
+                                                <Icons.Gauge size={16} className="absolute left-3.5 top-4 text-slate-500" />
                                             </div>
                                         </div>
                                     </div>
+
                                     <div>
-                                        <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block tracking-wider">Açıklama / WOD Detayı</label>
-                                        <textarea name="description" defaultValue={workout.description} rows={3} className="w-full p-3.5 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none text-slate-200 text-sm placeholder-slate-600 transition-all shadow-inner leading-relaxed" placeholder="Antrenman detayları..." readOnly={!canEditDetails} />
+                                        <label className="text-xs font-bold text-slate-500 mb-1.5 block">WOD Detayı</label>
+                                        <textarea name="description" defaultValue={workout.description} rows={4} className="w-full p-3.5 bg-slate-950 border border-slate-800 rounded-xl focus:border-yellow-500 outline-none text-slate-200 text-base sm:text-sm resize-none" placeholder="Antrenman detaylarını buraya girin..." readOnly={!canEditDetails} />
                                     </div>
                                 </div>
 
-                                <div className="space-y-4 pt-4 border-t border-slate-800">
-                                    <div className="bg-gradient-to-br from-amber-950/40 to-slate-900 p-4 rounded-xl border border-amber-900/40 shadow-sm relative overflow-hidden">
-                                        <div className="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
-                                        <label className="flex items-center gap-2 text-[10px] font-bold text-amber-500 mb-2 uppercase tracking-widest"><Icons.Zap size={14} /> Coach Notu</label>
-                                        <textarea name="coachNote" defaultValue={workout.coachNote} className="w-full bg-transparent border-0 p-0 text-amber-100 text-sm focus:ring-0 placeholder-amber-700/50 leading-relaxed resize-none min-h-[60px]" placeholder="Atlet için özel notlar..." readOnly={!canEditDetails} />
+                                <div className="space-y-4 pt-2">
+                                    {/* Coach Note */}
+                                    <div className="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/20">
+                                        <label className="flex items-center gap-2 text-xs font-bold text-amber-500 mb-2"><Icons.Zap size={14} /> Coach Notu</label>
+                                        <textarea name="coachNote" defaultValue={workout.coachNote} className="w-full bg-transparent border-0 p-0 text-amber-100 text-base sm:text-sm focus:ring-0 placeholder-amber-700/50 resize-none min-h-[60px]" placeholder="Atlet için özel notlar..." readOnly={!canEditDetails} />
                                     </div>
                                     
-                                    <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 relative shadow-sm">
+                                    {/* User Note (Editable by both) */}
+                                    <div className={`p-4 rounded-2xl border transition-colors duration-300 ${saveStatus === 'saving' || saveStatus === 'saved' ? 'bg-green-900/20 border-green-500/50' : 'bg-slate-950 border-slate-800'}`}>
                                         <div className="flex justify-between items-center mb-2">
-                                            <label className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest"><Icons.Dumbbell size={14} /> Sporcu Geri Bildirimi</label>
-                                            {!isCoach && saveStatus === 'saved' && <span className="text-[10px] text-green-400 flex items-center gap-1 bg-green-500/10 px-2 py-0.5 rounded-full"><Icons.CheckCircle2 size={12} /> Kaydedildi</span>}
+                                            <label className="flex items-center gap-2 text-xs font-bold text-slate-400"><Icons.Dumbbell size={14} /> Sporcu Geri Bildirimi</label>
+                                            {saveStatus === 'saved' && <span className="text-xs text-green-400 flex items-center gap-1"><Icons.CheckCircle2 size={14} /> Kaydedildi</span>}
+                                            {saveStatus === 'saving' && <span className="text-xs text-yellow-500">Kaydediliyor...</span>}
                                         </div>
-                                        
-                                        {/* Adminin sporcu notunu değiştirebilmesi için readOnly kaldırıldı ve name eklendi */}
-                                        {!isCoach ? (
-                                            <textarea value={localUserNote} onChange={(e) => setLocalUserNote(e.target.value)} onBlur={onUserNoteBlur} className="w-full bg-transparent border-0 p-0 text-white text-sm focus:ring-0 placeholder-slate-500 leading-relaxed resize-none min-h-[60px]" placeholder="Antrenman nasıl geçti? Pacing nasıldı? Notlarını buraya yaz..." />
-                                        ) : (
-                                            <textarea name="userNote" defaultValue={workout.userNote} className="w-full bg-transparent border-0 p-0 text-white text-sm focus:ring-0 placeholder-slate-600 leading-relaxed resize-none min-h-[60px]" placeholder="Sporcu henüz not girmedi. Coach olarak burayı düzenleyebilirsiniz..." />
-                                        )}
+                                        <textarea 
+                                            name="userNote" 
+                                            value={localUserNote} 
+                                            onChange={(e) => setLocalUserNote(e.target.value)} 
+                                            onBlur={handleNoteBlur}
+                                            className="w-full bg-transparent border-0 p-0 text-white text-base sm:text-sm focus:ring-0 placeholder-slate-600 resize-none min-h-[80px]" 
+                                            placeholder={isCoach ? "Sporcunun notunu buradan düzenleyebilirsiniz..." : "Antrenman nasıl geçti? Pacing nasıldı? Notlarını buraya yaz (Otomatik kaydedilir)..."}
+                                        />
                                     </div>
                                 </div>
-                                <div className="h-4 sm:h-0"></div>
                             </form>
                         </div>
 
+                        {/* Footer / Actions for Coach */}
                         {isCoach && (
-                            <div className="p-4 border-t border-slate-800 bg-slate-900 flex gap-3 sticky bottom-0 z-10 pb-8 sm:pb-4 backdrop-blur-xl bg-slate-900/90">
+                            <div className="p-4 border-t border-slate-800 bg-slate-900 flex gap-3 z-20 rounded-b-3xl">
                                 {dateChanged ? (
                                     <>
-                                        <button type="button" onClick={onClose} className="px-4 py-3.5 rounded-xl font-medium text-slate-400 hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-700">İptal</button>
-                                        <div className="flex-1 flex gap-2">
-                                            <button type="submit" form="workoutForm" onClick={() => setActionType('move')} className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 transition-all active:scale-95 shadow-lg">
-                                                <Icons.MoveRight size={18} /> Taşı
-                                            </button>
-                                            <button type="submit" form="workoutForm" onClick={() => setActionType('copy')} className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-900 shadow-lg shadow-yellow-900/40 hover:shadow-yellow-500/40 active:scale-95 transition-all">
-                                                <Icons.Copy size={18} /> Kopyala
-                                            </button>
-                                        </div>
+                                        <button type="submit" form="workoutForm" onClick={() => setActionType('move')} className="flex-1 py-4 rounded-xl font-bold bg-slate-800 text-white active:scale-95 transition-all">Taşı</button>
+                                        <button type="submit" form="workoutForm" onClick={() => setActionType('copy')} className="flex-1 py-4 rounded-xl font-bold bg-yellow-500 text-slate-950 active:scale-95 transition-all">Kopyala</button>
                                     </>
                                 ) : (
-                                    <>
-                                        <button type="button" onClick={onClose} className="flex-1 py-3.5 rounded-xl font-medium text-slate-400 hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-700">Vazgeç</button>
-                                        <button type="submit" form="workoutForm" onClick={() => setActionType('update')} className="flex-[2] py-3.5 rounded-xl font-bold bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-900 shadow-lg shadow-yellow-900/40 hover:shadow-yellow-500/40 active:scale-95 transition-all">Programı Kaydet</button>
-                                    </>
+                                    <button type="submit" form="workoutForm" onClick={() => setActionType('update')} className="w-full py-4 rounded-xl font-bold bg-yellow-500 text-slate-950 active:scale-95 transition-all text-lg shadow-lg shadow-yellow-500/20">Programı Kaydet</button>
                                 )}
                             </div>
                         )}
@@ -336,8 +364,6 @@
             const [isLoading, setIsLoading] = useState(true);
             const [athleteList, setAthleteList] = useState([]);
             const [selectedAthleteId, setSelectedAthleteId] = useState(null);
-            
-            // Drag and Drop State
             const [draggedDate, setDraggedDate] = useState(null);
             const [dragOverDate, setDragOverDate] = useState(null);
 
@@ -388,28 +414,23 @@
                 return () => unsubscribe();
             }, [selectedAthleteId]);
 
-            const handleGoogleLogin = async () => {
-                const provider = new firebase.auth.GoogleAuthProvider();
-                try { await auth.signInWithPopup(provider); } catch (error) { alert("Giriş başarısız: " + error.message); }
-            };
-
             const handleLogout = () => { auth.signOut(); setSelectedAthleteId(null); setWorkouts({}); };
 
+            // Calendar Math
             const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
             const getFirstDayOfMonth = (year, month) => {
                 let day = new Date(year, month, 1).getDay();
-                return day === 0 ? 6 : day - 1; // Monday first
+                return day === 0 ? 6 : day - 1; // Monday start
             };
 
-            const currentYear = currentDate.getFullYear();
-            const currentMonth = currentDate.getMonth();
-            const daysInMonth = getDaysInMonth(currentYear, currentMonth);
-            const firstDay = getFirstDayOfMonth(currentYear, currentMonth);
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            const daysInMonth = getDaysInMonth(year, month);
+            const firstDay = getFirstDayOfMonth(year, month);
+            const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+            const todayStr = new Date().toLocaleDateString('en-CA');
 
-            const handlePrevMonth = () => setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
-            const handleNextMonth = () => setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
-            const handleToday = () => setCurrentDate(new Date());
-
+            // Workout Handlers
             const handleSaveWorkout = async (e, actionType, targetDate) => {
                 e.preventDefault();
                 const formData = new FormData(e.target);
@@ -423,7 +444,7 @@
                     rpe: formData.get('rpe') || '',
                     description: formData.get('description') || '',
                     coachNote: formData.get('coachNote') || '',
-                    userNote: formData.get('userNote') || '', // Artık admin formu gönderdiğinde sporcu notu da kaydedilecek
+                    userNote: formData.get('userNote') || '',
                     athleteUid: selectedAthleteId,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
@@ -435,12 +456,11 @@
                     if (actionType === 'move' && targetDate !== selectedDate) {
                         await db.collection('workouts').doc(oldDocId).delete();
                     }
-                    
                     await db.collection('workouts').doc(newDocId).set(dataToSave, { merge: true });
                     setIsModalOpen(false);
                 } catch (error) {
-                    console.error("Error saving workout:", error);
-                    alert("Kayıt sırasında bir hata oluştu.");
+                    console.error("Save error:", error);
+                    alert("Kayıt hatası.");
                 }
             };
 
@@ -448,196 +468,171 @@
                 try {
                     await db.collection('workouts').doc(`${selectedAthleteId}_${selectedDate}`).delete();
                     setIsModalOpen(false);
-                } catch (error) {
-                    console.error("Error deleting workout:", error);
-                }
+                } catch (error) { console.error("Delete error:", error); }
             };
 
-            const handleAutoSaveNote = async (note) => {
-                if (!selectedAthleteId || !selectedDate) return;
-                try {
-                    await db.collection('workouts').doc(`${selectedAthleteId}_${selectedDate}`).set({
-                        userNote: note,
-                        status: workouts[selectedDate]?.status === 'pending' ? 'partial' : workouts[selectedDate]?.status,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    }, { merge: true });
-                } catch (error) {
-                    console.error("AutoSave Error:", error);
-                }
-            };
-
-            const handleDragStart = (e, date) => {
-                if (!isCoach || !workouts[date]) {
-                    e.preventDefault();
-                    return;
-                }
-                setDraggedDate(date);
-                e.dataTransfer.effectAllowed = 'move';
-                // Transparent image to hide default browser drag ghost
-                const img = new Image();
-                img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-                e.dataTransfer.setDragImage(img, 0, 0);
-            };
-
-            const handleDragOver = (e, date) => {
-                e.preventDefault();
-                if (!isCoach || draggedDate === date) return;
-                setDragOverDate(date);
-            };
-
-            const handleDragLeave = (e) => {
+            // D&D Handlers
+            const onDragStart = (e, date) => { if (isCoach && workouts[date]) { setDraggedDate(date); e.dataTransfer.effectAllowed = 'move'; } else e.preventDefault(); };
+            const onDragOver = (e, date) => { e.preventDefault(); if (isCoach && draggedDate !== date) setDragOverDate(date); };
+            const onDragLeave = () => setDragOverDate(null);
+            const onDrop = async (e, targetDate) => {
                 e.preventDefault();
                 setDragOverDate(null);
-            };
-
-            const handleDrop = async (e, targetDate) => {
-                e.preventDefault();
-                setDragOverDate(null);
+                if (!isCoach || !draggedDate || draggedDate === targetDate) { setDraggedDate(null); return; }
                 
-                if (!isCoach || !draggedDate || draggedDate === targetDate) {
-                    setDraggedDate(null);
-                    return;
-                }
-
-                const draggedWorkout = workouts[draggedDate];
-                const oldDocId = `${selectedAthleteId}_${draggedDate}`;
-                const newDocId = `${selectedAthleteId}_${targetDate}`;
-
+                const data = workouts[draggedDate];
                 try {
-                    // Start moving the document
-                    const { id, ...dataToMove } = draggedWorkout;
-                    await db.collection('workouts').doc(newDocId).set(dataToMove, { merge: true });
-                    await db.collection('workouts').doc(oldDocId).delete();
-                } catch (error) {
-                    console.error("Sürükle-bırak hatası:", error);
-                }
-                
+                    await db.collection('workouts').doc(`${selectedAthleteId}_${targetDate}`).set({ ...data, id: undefined }, { merge: true });
+                    await db.collection('workouts').doc(`${selectedAthleteId}_${draggedDate}`).delete();
+                } catch (err) {}
                 setDraggedDate(null);
             };
 
-            if (isLoading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><div className="w-12 h-12 border-4 border-slate-800 border-t-yellow-500 rounded-full animate-spin"></div></div>;
-            if (!user) return <LoginScreen onLogin={handleGoogleLogin} />;
+            if (isLoading) return <div className="min-h-screen flex items-center justify-center"><div className="w-10 h-10 border-4 border-slate-800 border-t-yellow-500 rounded-full animate-spin"></div></div>;
+            if (!user) return <LoginScreen onLogin={async () => { try { await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); } catch (e) { alert("Giriş başarısız."); } }} />;
 
-            const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
-            const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD format based on local time
+            // Render Coach's Athlete Selector if no athlete selected
+            if (isCoach && !selectedAthleteId) {
+                return (
+                    <div className="min-h-screen flex flex-col">
+                        <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-30 p-4 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-yellow-500 rounded-xl flex items-center justify-center text-slate-900 font-black text-lg">HC</div>
+                                <h1 className="text-white font-bold text-lg hidden sm:block">Coach Paneli</h1>
+                            </div>
+                            <button onClick={handleLogout} className="p-2.5 text-slate-400 hover:text-white bg-slate-800 rounded-xl"><Icons.LogOut size={20} /></button>
+                        </header>
+                        <AthleteSelector athletes={athleteList} onSelect={setSelectedAthleteId} />
+                    </div>
+                );
+            }
+
+            const activeAthlete = athleteList.find(a => a.uid === selectedAthleteId);
 
             return (
-                <div className="min-h-screen flex flex-col bg-slate-950 font-sans">
+                <div className="min-h-screen flex flex-col pb-safe">
                     {/* Header */}
                     <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-30 shadow-md">
-                        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-gradient-to-tr from-yellow-500 to-amber-600 rounded-lg flex items-center justify-center text-slate-950 font-extrabold text-lg shadow-md">HC</div>
-                                <div className="hidden sm:block">
-                                    <h1 className="text-white font-bold tracking-tight leading-tight">Oray's Coaching</h1>
-                                    <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest">{isCoach ? 'Yönetici Paneli' : 'Sporcu Paneli'}</p>
+                        <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+                            {isCoach ? (
+                                <button onClick={() => setSelectedAthleteId(null)} className="flex items-center gap-2 text-slate-300 hover:text-white bg-slate-800 px-3 py-2 rounded-xl transition-colors">
+                                    <Icons.ChevronLeft size={18} />
+                                    <div className="flex flex-col items-start">
+                                        <span className="text-[10px] uppercase text-slate-500 font-bold leading-none mb-0.5">Sporcu</span>
+                                        <span className="text-sm font-bold leading-none truncate max-w-[100px] sm:max-w-[150px]">{activeAthlete?.displayName || 'Geri'}</span>
+                                    </div>
+                                </button>
+                            ) : (
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-yellow-500 rounded-xl flex items-center justify-center text-slate-900 font-black text-lg">HC</div>
+                                    <div>
+                                        <h1 className="text-white font-bold leading-tight">Oray's Coaching</h1>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Sporcu Paneli</p>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                             
-                            <div className="flex items-center gap-3">
-                                {isCoach && (
-                                    <select 
-                                        className="bg-slate-950 border border-slate-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-yellow-500"
-                                        value={selectedAthleteId || ""}
-                                        onChange={(e) => setSelectedAthleteId(e.target.value)}
-                                    >
-                                        <option value="" disabled>Sporcu Seçin</option>
-                                        {athleteList.map(a => (
-                                            <option key={a.uid} value={a.uid}>{a.displayName}</option>
-                                        ))}
-                                    </select>
-                                )}
-                                <div className="flex items-center gap-2 bg-slate-800/50 rounded-lg p-1 border border-slate-700">
-                                    <button onClick={handlePrevMonth} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded-md transition-colors"><Icons.ChevronLeft size={18} /></button>
-                                    <button onClick={handleToday} className="px-3 py-1 text-sm font-bold text-white hover:bg-slate-700 rounded-md transition-colors whitespace-nowrap">{monthNames[currentMonth]} {currentYear}</button>
-                                    <button onClick={handleNextMonth} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded-md transition-colors"><Icons.ChevronRight size={18} /></button>
-                                </div>
-                                <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-colors ml-1"><Icons.LogOut size={20} /></button>
-                            </div>
+                            <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-xl transition-colors ml-2"><Icons.LogOut size={20} /></button>
                         </div>
                     </header>
 
                     {/* Main Content Area */}
-                    <main className="flex-1 max-w-7xl mx-auto w-full p-4 flex flex-col">
-                        {!selectedAthleteId && isCoach ? (
-                            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 animate-in">
-                                <div className="w-20 h-20 bg-slate-900 rounded-full flex items-center justify-center mb-4 border-2 border-dashed border-slate-700 text-slate-600"><Icons.User size={32} /></div>
-                                <h2 className="text-xl font-bold text-white mb-2">Sporcu Seçin</h2>
-                                <p className="text-slate-400 max-w-sm">Antrenman programını görüntülemek veya düzenlemek için yukarıdaki menüden bir sporcu seçin.</p>
+                    <main className="flex-1 max-w-6xl mx-auto w-full p-2 sm:p-4 flex flex-col animate-fade-in">
+                        
+                        {/* Calendar Controls */}
+                        <div className="flex items-center justify-between bg-slate-900 p-2 sm:p-4 rounded-2xl mb-2 sm:mb-4 border border-slate-800">
+                            <h2 className="text-lg sm:text-xl font-bold text-white ml-2 capitalize">{monthNames[month]} {year}</h2>
+                            <div className="flex bg-slate-950 rounded-xl border border-slate-800 p-1">
+                                <button onClick={() => setCurrentDate(new Date(year, month - 1, 1))} className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg"><Icons.ChevronLeft size={20}/></button>
+                                <button onClick={() => setCurrentDate(new Date())} className="px-4 py-2 text-sm font-bold text-yellow-500 hover:bg-slate-800 rounded-lg">Bugün</button>
+                                <button onClick={() => setCurrentDate(new Date(year, month + 1, 1))} className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg"><Icons.ChevronRight size={20}/></button>
                             </div>
-                        ) : (
-                            <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-xl animate-in">
-                                {/* Weekday Headers */}
-                                <div className="grid grid-cols-7 bg-slate-800/50 border-b border-slate-800">
-                                    {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map((day, i) => (
-                                        <div key={i} className="py-3 text-center text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">{day}</div>
-                                    ))}
-                                </div>
+                        </div>
+
+                        {/* Calendar Grid Optimized for Mobile & Desktop */}
+                        <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+                            {/* Weekday Headers */}
+                            <div className="grid grid-cols-7 bg-slate-800/50 border-b border-slate-800">
+                                {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map(day => (
+                                    <div key={day} className="py-2.5 text-center text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">{day}</div>
+                                ))}
+                            </div>
+                            
+                            {/* Days */}
+                            <div className="grid grid-cols-7 bg-slate-800 gap-[1px]">
+                                {Array.from({ length: firstDay }).map((_, i) => <div key={`e-${i}`} className="bg-slate-950/50"></div>)}
                                 
-                                {/* Calendar Grid */}
-                                <div className="grid grid-cols-7 auto-rows-fr bg-slate-900">
-                                    {Array.from({ length: firstDay }).map((_, i) => (
-                                        <div key={`empty-${i}`} className="min-h-[100px] border-b border-r border-slate-800/50 bg-slate-950/20 p-2 opacity-30"></div>
-                                    ))}
+                                {Array.from({ length: daysInMonth }).map((_, i) => {
+                                    const dateNum = i + 1;
+                                    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dateNum).padStart(2, '0')}`;
+                                    const isToday = dateStr === todayStr;
+                                    const workout = workouts[dateStr];
+                                    const typeObj = workout ? WORKOUT_TYPES[workout.type] : null;
+                                    const statObj = workout ? STATUS_CONFIG[workout.status || 'pending'] : null;
                                     
-                                    {Array.from({ length: daysInMonth }).map((_, i) => {
-                                        const dateNum = i + 1;
-                                        const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dateNum).padStart(2, '0')}`;
-                                        const isToday = dateStr === todayStr;
-                                        const workout = workouts[dateStr];
-                                        const isDragged = draggedDate === dateStr;
-                                        const isDragOver = dragOverDate === dateStr;
+                                    const isDragOver = dragOverDate === dateStr;
+                                    const isDragged = draggedDate === dateStr;
 
-                                        return (
-                                            <div 
-                                                key={dateStr}
-                                                onClick={() => { setSelectedDate(dateStr); setIsModalOpen(true); }}
-                                                draggable={isCoach && !!workout}
-                                                onDragStart={(e) => handleDragStart(e, dateStr)}
-                                                onDragOver={(e) => handleDragOver(e, dateStr)}
-                                                onDragLeave={handleDragLeave}
-                                                onDrop={(e) => handleDrop(e, dateStr)}
-                                                className={`min-h-[100px] sm:min-h-[120px] p-1.5 sm:p-2 border-b border-r border-slate-800/50 relative group cursor-pointer transition-all duration-200 
-                                                    ${isToday ? 'bg-slate-800/30' : 'hover:bg-slate-800/40'}
-                                                    ${isDragOver ? 'drag-active-target bg-slate-800' : ''}
-                                                    ${isDragged ? 'dragging-item' : ''}
-                                                `}
-                                            >
-                                                <div className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center mb-1 transition-colors
-                                                    ${isToday ? 'bg-yellow-500 text-slate-900' : 'text-slate-500 group-hover:text-slate-300'}
-                                                `}>
+                                    return (
+                                        <div 
+                                            key={dateStr}
+                                            onClick={() => { setSelectedDate(dateStr); setIsModalOpen(true); }}
+                                            draggable={isCoach && !!workout}
+                                            onDragStart={(e) => onDragStart(e, dateStr)}
+                                            onDragOver={(e) => onDragOver(e, dateStr)}
+                                            onDragLeave={onDragLeave}
+                                            onDrop={(e) => onDrop(e, dateStr)}
+                                            className={`bg-slate-950 p-1 sm:p-2 min-h-[75px] sm:min-h-[120px] flex flex-col relative cursor-pointer group active:bg-slate-900 transition-colors
+                                                ${isToday ? 'bg-slate-900/80' : 'hover:bg-slate-900/50'}
+                                                ${isDragOver ? 'drag-over' : ''}
+                                                ${isDragged ? 'opacity-40' : ''}
+                                            `}
+                                        >
+                                            {/* Date Number */}
+                                            <div className="flex justify-between items-start">
+                                                <span className={`text-[11px] sm:text-sm font-bold w-6 h-6 flex items-center justify-center rounded-full 
+                                                    ${isToday ? 'bg-yellow-500 text-slate-900' : 'text-slate-500 group-hover:text-slate-300'}`}>
                                                     {dateNum}
-                                                </div>
-
-                                                {workout ? (
-                                                    <div className={`mt-1 rounded-lg p-2 text-xs border border-transparent shadow-sm flex flex-col gap-1 transition-all group-hover:scale-[1.02]
-                                                        ${WORKOUT_TYPES[workout.type]?.bgColor || 'bg-slate-800'}
-                                                        ${STATUS_STYLES[workout.status || 'pending']}
-                                                    `}>
-                                                        <div className="flex items-center gap-1.5 opacity-90 truncate">
-                                                            {WORKOUT_TYPES[workout.type]?.icon}
-                                                            <span className={`font-bold truncate ${WORKOUT_TYPES[workout.type]?.textColor || 'text-white'}`}>
-                                                                {WORKOUT_TYPES[workout.type]?.label}
-                                                            </span>
-                                                        </div>
-                                                        {workout.title && <div className="text-[10px] text-slate-300 truncate font-medium">{workout.title}</div>}
-                                                        {workout.volume && <div className="text-[10px] text-slate-400 truncate opacity-80 mt-0.5">{workout.volume}</div>}
-                                                        {workout.coachNote && <div className="absolute top-2 right-2 text-yellow-500 animate-pulse" title="Coach Notu Var"><Icons.Zap size={10} /></div>}
-                                                    </div>
-                                                ) : (
-                                                    isCoach && <div className="absolute inset-0 m-auto w-8 h-8 rounded-full bg-slate-800/50 text-slate-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity scale-75 group-hover:scale-100"><Icons.Plus size={16} /></div>
-                                                )}
+                                                </span>
+                                                {/* Mobile Status Dot */}
+                                                {workout && <span className={`w-2 h-2 rounded-full sm:hidden ${statObj?.dot || 'bg-slate-500'}`}></span>}
                                             </div>
-                                        );
-                                    })}
 
-                                    {/* Fill remaining empty cells */}
-                                    {Array.from({ length: (7 - ((firstDay + daysInMonth) % 7)) % 7 }).map((_, i) => (
-                                        <div key={`empty-end-${i}`} className="min-h-[100px] border-b border-r border-slate-800/50 bg-slate-950/20 p-2 opacity-30"></div>
-                                    ))}
-                                </div>
+                                            {/* Workout Content */}
+                                            {workout ? (
+                                                <div className={`mt-1 flex-1 rounded sm:rounded-lg p-1 sm:p-2 flex flex-col gap-0.5 sm:gap-1 border-l-2 sm:border sm:border-l-4 overflow-hidden 
+                                                    ${typeObj?.bgLight || 'bg-slate-800'} ${statObj?.class || 'border-slate-700'} 
+                                                `}>
+                                                    {/* Mobile View: Icon + Tiny Text */}
+                                                    <div className="sm:hidden flex flex-col items-center justify-center h-full opacity-80">
+                                                        <div className={typeObj?.text || 'text-slate-400'}>{typeObj?.icon}</div>
+                                                        <span className="text-[8px] font-bold mt-0.5 truncate w-full text-center text-slate-300">{workout.title || typeObj?.label}</span>
+                                                    </div>
+
+                                                    {/* Desktop View: Full Details */}
+                                                    <div className="hidden sm:flex flex-col h-full">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-1.5 truncate">
+                                                                <span className={typeObj?.text || 'text-white'}>{typeObj?.icon}</span>
+                                                                <span className={`text-xs font-bold truncate ${typeObj?.text || 'text-white'}`}>{typeObj?.label}</span>
+                                                            </div>
+                                                        </div>
+                                                        {workout.title && <div className="text-[10px] text-slate-300 font-medium truncate mt-1">{workout.title}</div>}
+                                                        {workout.volume && <div className="text-[10px] text-slate-400 truncate mt-0.5">{workout.volume}</div>}
+                                                        {workout.coachNote && <div className="absolute bottom-2 right-2 text-yellow-500"><Icons.Zap size={12} /></div>}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                isCoach && <div className="hidden sm:flex absolute inset-0 m-auto w-8 h-8 rounded-full bg-slate-800 text-slate-400 items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Icons.Plus size={16} /></div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                                
+                                {/* Padding for end of month */}
+                                {Array.from({ length: (7 - ((firstDay + daysInMonth) % 7)) % 7 }).map((_, i) => <div key={`ee-${i}`} className="bg-slate-950/50"></div>)}
                             </div>
-                        )}
+                        </div>
                     </main>
 
                     {/* Modals */}
@@ -646,11 +641,9 @@
                             selectedDate={selectedDate}
                             workout={workouts[selectedDate] || {}}
                             isCoach={isCoach}
-                            hasWorkout={!!workouts[selectedDate]}
                             onClose={() => setIsModalOpen(false)}
                             onSave={handleSaveWorkout}
                             onDelete={handleDeleteWorkout}
-                            onAutoSave={handleAutoSaveNote}
                         />
                     )}
                 </div>
