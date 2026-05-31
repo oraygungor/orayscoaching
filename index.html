@@ -27,10 +27,8 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .animate-in { animation: fadeIn 0.3s ease-out; }
         .slide-in { animation: slideUp 0.3s ease-out; }
-        .toast-enter { animation: slideDown 0.3s ease-out forwards; }
         
         @keyframes pulse-yellow {
             0% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7); }
@@ -62,15 +60,9 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        /* * NOT: Bu kod MVP yapısında tek bir HTML dosyası olarak hazırlanmıştır.
-         * Gerçek Production ortamında Vite/React projelerine bölünmeli, 
-         * Firebase Security Rules yazılmalı ve unreadCount gibi alanlar 
-         * Cloud Functions üzerinden güvenle yönetilmelidir.
-         */
-
         // --- CONFIGURATION ---
         const ADMIN_EMAIL = "oray.gungor@gmail.com";
-        const APP_VERSION = "v1.6-hyrox-pro-arch";
+        const APP_VERSION = "v1.5-hyrox-pro";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCu-H_z8dwFV7tc4uS1o79SDD-Cm7Hvei4",
@@ -89,7 +81,7 @@
         const db = firebase.firestore();
 
         // --- ICONS SYSTEM ---
-        const { useState, useEffect, useRef, createContext, useContext, useCallback } = React;
+        const { useState, useEffect, useRef } = React;
 
         const IconBase = ({ size = 24, children, ...props }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -115,49 +107,12 @@
             Trash2: (props) => <IconBase {...props}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></IconBase>,
             LogOut: (props) => <IconBase {...props}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></IconBase>,
             CheckCircle2: (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></IconBase>,
-            AlertCircle: (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></IconBase>,
             Scale: (props) => <IconBase {...props}><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></IconBase>,
             Copy: (props) => <IconBase {...props}><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></IconBase>,
             MoveRight: (props) => <IconBase {...props}><path d="M18 8L22 12L18 16"/><path d="M2 12H22"/></IconBase>,
             User: (props) => <IconBase {...props}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconBase>,
             FileText: (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></IconBase>
         };
-
-        // --- TOAST SYSTEM ---
-        const ToastContext = createContext();
-        const useToast = () => useContext(ToastContext);
-
-        const ToastProvider = ({ children }) => {
-            const [toasts, setToasts] = useState([]);
-
-            const addToast = useCallback((message, type = 'info') => {
-                const id = Date.now();
-                setToasts(prev => [...prev, { id, message, type }]);
-                setTimeout(() => {
-                    setToasts(prev => prev.filter(t => t.id !== id));
-                }, 3000);
-            }, []);
-
-            return (
-                <ToastContext.Provider value={{ addToast }}>
-                    {children}
-                    <div className="fixed top-4 left-0 right-0 z-[100] flex flex-col items-center gap-2 pointer-events-none px-4">
-                        {toasts.map(toast => (
-                            <div key={toast.id} className={`toast-enter flex items-center gap-2 px-4 py-3 rounded-2xl shadow-xl backdrop-blur-md border text-sm font-bold w-full max-w-sm
-                                ${toast.type === 'success' ? 'bg-green-500/20 border-green-500/50 text-green-400' : ''}
-                                ${toast.type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-400' : ''}
-                                ${toast.type === 'info' ? 'bg-slate-800 border-slate-700 text-white' : ''}
-                            `}>
-                                {toast.type === 'success' && <Icons.CheckCircle2 size={18} />}
-                                {toast.type === 'error' && <Icons.AlertCircle size={18} />}
-                                {toast.type === 'info' && <Icons.Activity size={18} />}
-                                <span>{toast.message}</span>
-                            </div>
-                        ))}
-                    </div>
-                </ToastContext.Provider>
-            );
-        };
 
         // --- HYROX WORKOUT TYPES ---
         const WORKOUT_TYPES = {
@@ -195,39 +150,34 @@
                 <div className="w-20 h-20 bg-gradient-to-tr from-yellow-500 to-amber-600 rounded-3xl flex items-center justify-center text-slate-950 font-extrabold text-3xl shadow-2xl shadow-yellow-900/50 transform rotate-6 mb-8 hover:scale-105 transition-transform duration-300">HC</div>
                 <h1 className="text-4xl font-black text-white mb-2 tracking-tight drop-shadow-md">Oray's Hyrox Coaching</h1>
                 <p className="text-slate-400 mb-8 max-w-xs mx-auto">Hyrox atletleri için kişiselleştirilmiş performans programı.</p>
-                <button onClick={onLogin} aria-label="Google ile Giriş Yap" className="flex items-center gap-3 bg-white text-slate-900 px-8 py-4 rounded-xl font-bold hover:bg-slate-100 transition-all active:scale-95 shadow-xl hover:shadow-yellow-500/20">Google ile Giriş Yap</button>
+                <button onClick={onLogin} className="flex items-center gap-3 bg-white text-slate-900 px-8 py-4 rounded-xl font-bold hover:bg-slate-100 transition-all active:scale-95 shadow-xl hover:shadow-yellow-500/20">Google ile Giriş Yap</button>
             </div>
         );
 
-        // Modal Formu artık key prop'u ile mount/unmount edilerek State sızıntısı engellenir.
         const WorkoutModal = ({ selectedDate, workout = {}, isCoach, onClose, onSave, onDelete, onAutoSave, hasWorkout, onMarkRead }) => {
             const [localUserNote, setLocalUserNote] = useState(workout.userNote || "");
             const [saveStatus, setSaveStatus] = useState("idle");
             const [deleteConfirm, setDeleteConfirm] = useState(false);
             const [modalDate, setModalDate] = useState(selectedDate);
-            const [actionType, setActionType] = useState('update');
-            
+            const [actionType, setActionType] = useState('update'); // update, move, copy
+
             const [coachNoteExpanded, setCoachNoteExpanded] = useState(false);
             const [userNoteExpanded, setUserNoteExpanded] = useState(false);
-            const { addToast } = useToast();
 
-            // Sadece ilk açılışta okunmamış bildirimleri sıfırla
+            useEffect(() => { setLocalUserNote(workout.userNote || ""); }, [workout.userNote]);
+            useEffect(() => { setModalDate(selectedDate); }, [selectedDate]);
+            
             useEffect(() => {
                 if (onMarkRead) onMarkRead();
             }, []);
 
-            // Sporcu formunda not değişiklikleri sırasında kaydedilmeyen veri olursa uyar veya açıkça kaydet
-            const handleNoteSave = () => {
+            const onUserNoteBlur = () => {
                 if (localUserNote !== (workout.userNote || "")) {
                     setSaveStatus("saving");
                     onAutoSave(localUserNote).then(() => {
                         setSaveStatus("saved");
-                        addToast("Geri bildiriminiz kaydedildi.", "success");
-                        setTimeout(() => setSaveStatus("idle"), 3000);
-                    }).catch(() => {
-                        setSaveStatus("idle");
-                        addToast("Hata oluştu, kaydedilemedi.", "error");
-                    });
+                        setTimeout(() => setSaveStatus("idle"), 2000);
+                    });
                 }
             };
 
@@ -250,7 +200,7 @@
                         <div className="bg-slate-800/80 p-4 border-b border-slate-700 flex justify-between items-center sticky top-0 z-10 backdrop-blur-xl">
                             <div className="flex items-center gap-3 flex-1">
                                 {hasWorkout && isCoach && (
-                                    <button type="button" aria-label="Antrenmanı Sil" onClick={handleDeleteClick} className={`p-2 rounded-xl transition-all border mr-1 group flex items-center gap-2 ${deleteConfirm ? "bg-red-600 text-white border-red-600 px-3 shadow-lg shadow-red-600/30" : "bg-slate-900 hover:bg-red-500/10 text-slate-400 hover:text-red-500 border-slate-700"}`} title="Sil">
+                                    <button type="button" onClick={handleDeleteClick} className={`p-2 rounded-xl transition-all border mr-1 group flex items-center gap-2 ${deleteConfirm ? "bg-red-600 text-white border-red-600 px-3 shadow-lg shadow-red-600/30" : "bg-slate-900 hover:bg-red-500/10 text-slate-400 hover:text-red-500 border-slate-700"}`} title="Sil">
                                         <Icons.Trash2 size={18} /> {deleteConfirm && <span className="text-xs font-bold whitespace-nowrap">Sil?</span>}
                                     </button>
                                 )}
@@ -264,7 +214,6 @@
                                                 onChange={(e) => setModalDate(e.target.value)}
                                                 className="bg-transparent text-white font-bold outline-none w-full text-sm [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] [&::-webkit-calendar-picker-indicator]:opacity-50 hover:[&::-webkit-calendar-picker-indicator]:opacity-100 cursor-pointer"
                                                 required
-                                                aria-label="Tarih Değiştir"
                                             />
                                         </div>
                                     ) : (
@@ -275,12 +224,11 @@
                                     )}
                                 </div>
                             </div>
-                            <button type="button" aria-label="Kapat" onClick={onClose} className="text-slate-400 hover:text-white p-2 transition-colors ml-2 bg-slate-900 rounded-xl border border-slate-700 hover:border-slate-500"><Icons.X size={20} /></button>
+                            <button type="button" onClick={onClose} className="text-slate-400 hover:text-white p-2 transition-colors ml-2 bg-slate-900 rounded-xl border border-slate-700 hover:border-slate-500"><Icons.X size={20} /></button>
                         </div>
 
                         <div className="p-5 overflow-y-auto custom-scrollbar bg-gradient-to-b from-slate-900 to-slate-950">
-                            {/* Anahtarlanan form, tarih değiştiğinde form elemanlarını tamamen resetler. */}
-                            <form id="workoutForm" key={modalDate + (workout.id || 'new')} onSubmit={handleFormSubmit} className="space-y-6">
+                            <form id="workoutForm" onSubmit={handleFormSubmit} className="space-y-6">
                                 <div className="flex gap-2 bg-slate-950/50 p-1.5 rounded-2xl border border-slate-800">
                                     {Object.entries(STATUS_CONFIG).map(([key, config]) => (
                                         <label key={key} className="flex-1 cursor-pointer group relative">
@@ -342,7 +290,6 @@
                                         <div
                                             className="flex justify-between items-center mb-2 cursor-pointer group"
                                             onClick={() => setCoachNoteExpanded(!coachNoteExpanded)}
-                                            aria-label="Coach Notunu Genişlet"
                                             role="button"
                                         >
                                             <label className="flex items-center gap-2 text-[10px] font-bold text-amber-500 uppercase tracking-widest cursor-pointer"><Icons.Zap size={14} /> Coach Notu</label>
@@ -364,38 +311,25 @@
                                         <div
                                             className="flex justify-between items-center mb-2 cursor-pointer group"
                                             onClick={() => setUserNoteExpanded(!userNoteExpanded)}
-                                            aria-label="Sporcu Geri Bildirimini Genişlet"
                                             role="button"
                                         >
                                             <label className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest cursor-pointer"><Icons.Dumbbell size={14} /> Sporcu Geri Bildirimi</label>
                                             <div className="flex items-center gap-2">
+                                                {!isCoach && saveStatus === 'saved' && <span className="text-[10px] text-green-400 flex items-center gap-1 bg-green-500/10 px-2 py-0.5 rounded-full"><Icons.CheckCircle2 size={12} /> Kaydedildi</span>}
                                                 <button type="button" className="text-slate-500 group-hover:text-slate-300 p-1 transition-colors">
                                                     <Icons.ChevronRight size={16} className={`transition-transform duration-300 ${userNoteExpanded ? '-rotate-90' : 'rotate-90'}`} />
                                                 </button>
                                             </div>
                                         </div>
                                         {!isCoach ? (
-                                            <div className="space-y-3">
-                                                <textarea
-                                                    value={localUserNote}
-                                                    onChange={(e) => setLocalUserNote(e.target.value)}
-                                                    onFocus={() => setUserNoteExpanded(true)}
-                                                    className={`w-full bg-transparent border-0 p-0 text-white text-sm focus:ring-0 placeholder-slate-500 leading-relaxed resize-none transition-all duration-300 custom-scrollbar ${userNoteExpanded ? 'min-h-[160px] overflow-y-auto' : 'min-h-[44px] h-[44px] overflow-hidden cursor-pointer'}`}
-                                                    placeholder="Antrenman nasıl geçti? Pacing nasıldı? Notlarını buraya yaz..."
-                                                />
-                                                {userNoteExpanded && localUserNote !== (workout.userNote || "") && (
-                                                    <div className="flex justify-end pt-2 border-t border-slate-700/50">
-                                                        <button 
-                                                            type="button" 
-                                                            onClick={handleNoteSave}
-                                                            disabled={saveStatus === 'saving'}
-                                                            className="text-xs bg-green-600/20 text-green-400 border border-green-500/50 hover:bg-green-600 hover:text-white px-4 py-2 rounded-lg font-bold transition-colors flex items-center gap-2"
-                                                        >
-                                                            {saveStatus === 'saving' ? 'Kaydediliyor...' : 'Geri Bildirimi Kaydet'}
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
+                                            <textarea
+                                                value={localUserNote}
+                                                onChange={(e) => setLocalUserNote(e.target.value)}
+                                                onBlur={onUserNoteBlur}
+                                                onFocus={() => setUserNoteExpanded(true)}
+                                                className={`w-full bg-transparent border-0 p-0 text-white text-sm focus:ring-0 placeholder-slate-500 leading-relaxed resize-none transition-all duration-300 custom-scrollbar ${userNoteExpanded ? 'min-h-[160px] overflow-y-auto' : 'min-h-[44px] h-[44px] overflow-hidden cursor-pointer'}`}
+                                                placeholder="Antrenman nasıl geçti? Pacing nasıldı? Notlarını buraya yaz..."
+                                            />
                                         ) : (
                                             <textarea
                                                 name="userNote"
@@ -416,20 +350,20 @@
                             <div className="p-4 border-t border-slate-800 bg-slate-900 flex gap-3 sticky bottom-0 z-10 pb-8 sm:pb-4 backdrop-blur-xl bg-slate-900/90">
                                 {dateChanged ? (
                                     <>
-                                        <button type="button" aria-label="İptal" onClick={onClose} className="px-4 py-3.5 rounded-xl font-medium text-slate-400 hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-700">İptal</button>
+                                        <button type="button" onClick={onClose} className="px-4 py-3.5 rounded-xl font-medium text-slate-400 hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-700">İptal</button>
                                         <div className="flex-1 flex gap-2">
-                                            <button type="submit" aria-label="Taşı" form="workoutForm" onClick={() => setActionType('move')} className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 transition-all active:scale-95 shadow-lg">
+                                            <button type="submit" form="workoutForm" onClick={() => setActionType('move')} className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 transition-all active:scale-95 shadow-lg">
                                                 <Icons.MoveRight size={18} /> Taşı
                                             </button>
-                                            <button type="submit" aria-label="Kopyala" form="workoutForm" onClick={() => setActionType('copy')} className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-900 shadow-lg shadow-yellow-900/40 hover:shadow-yellow-500/40 active:scale-95 transition-all">
+                                            <button type="submit" form="workoutForm" onClick={() => setActionType('copy')} className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-900 shadow-lg shadow-yellow-900/40 hover:shadow-yellow-500/40 active:scale-95 transition-all">
                                                 <Icons.Copy size={18} /> Kopyala
                                             </button>
                                         </div>
                                     </>
                                 ) : (
                                     <>
-                                        <button type="button" aria-label="Vazgeç" onClick={onClose} className="flex-1 py-3.5 rounded-xl font-medium text-slate-400 hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-700">Vazgeç</button>
-                                        <button type="submit" aria-label="Programı Kaydet" form="workoutForm" onClick={() => setActionType('update')} className="flex-[2] py-3.5 rounded-xl font-bold bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-900 shadow-lg shadow-yellow-900/40 hover:shadow-yellow-500/40 active:scale-95 transition-all">Programı Kaydet</button>
+                                        <button type="button" onClick={onClose} className="flex-1 py-3.5 rounded-xl font-medium text-slate-400 hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-700">Vazgeç</button>
+                                        <button type="submit" form="workoutForm" onClick={() => setActionType('update')} className="flex-[2] py-3.5 rounded-xl font-bold bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-900 shadow-lg shadow-yellow-900/40 hover:shadow-yellow-500/40 active:scale-95 transition-all">Programı Kaydet</button>
                                     </>
                                 )}
                             </div>
@@ -439,7 +373,7 @@
             );
         };
 
-        const AppContent = () => {
+        const App = () => {
             const [user, setUser] = useState(null);
             const [currentDate, setCurrentDate] = useState(new Date()); 
             const [workouts, setWorkouts] = useState({});
@@ -449,7 +383,6 @@
             const [isLoading, setIsLoading] = useState(true);
             const [athleteList, setAthleteList] = useState([]);
             const [selectedAthleteId, setSelectedAthleteId] = useState(null);
-            const { addToast } = useToast();
             
             // Drag and Drop State
             const [draggedDate, setDraggedDate] = useState(null);
@@ -472,7 +405,6 @@
                         if (currentUser.email !== ADMIN_EMAIL) {
                             setSelectedAthleteId(currentUser.uid);
                         }
-                        addToast(`Hoş geldin, ${currentUser.displayName || 'Kullanıcı'}`, 'success');
                     }
                     setIsLoading(false);
                 });
@@ -484,45 +416,31 @@
                     const unsubscribe = db.collection('users').onSnapshot(snapshot => {
                         const users = snapshot.docs.map(doc => doc.data()).filter(u => u.email !== ADMIN_EMAIL);
                         setAthleteList(users);
-                    }, err => {
-                        console.error("Athlete list fetch error:", err);
-                        addToast("Atlet listesi çekilemedi.", "error");
-                    });
+                    });
                     return () => unsubscribe();
                 }
             }, [isCoach]);
 
             useEffect(() => {
                 if (!selectedAthleteId) return;
-                // MIMARI GUNCELLEME: data modeli "workouts/{uid}/days/{date}" olarak düzeltildi
-                const unsubscribe = db.collection("workouts").doc(selectedAthleteId).collection("days").onSnapshot((snapshot) => {
+                const unsubscribe = db.collection("workouts").where("athleteUid", "==", selectedAthleteId).onSnapshot((snapshot) => {
                         const data = {};
                         snapshot.forEach(doc => {
-                            data[doc.id] = { ...doc.data(), id: doc.id };
+                            const workoutData = doc.data();
+                            const dateKey = doc.id.split('_').pop(); 
+                            if(dateKey) data[dateKey] = { ...workoutData, id: doc.id };
                         });
                         setWorkouts(data);
-                    }, err => {
-                        console.error("Workouts fetch error:", err);
-                        addToast("Program yüklenirken bir hata oluştu.", "error");
-                    });
+                    });
                 return () => unsubscribe();
             }, [selectedAthleteId]);
 
             const handleGoogleLogin = async () => {
                 const provider = new firebase.auth.GoogleAuthProvider();
-                try { 
-                    await auth.signInWithPopup(provider); 
-                } catch (error) { 
-                    alert("Giriş başarısız: " + error.message); 
-                }
+                try { await auth.signInWithPopup(provider); } catch (error) { alert("Giriş başarısız: " + error.message); }
             };
 
-            const handleLogout = () => { 
-                auth.signOut(); 
-                setSelectedAthleteId(null); 
-                setWorkouts({}); 
-                addToast("Çıkış yapıldı.", "info");
-            };
+            const handleLogout = () => { auth.signOut(); setSelectedAthleteId(null); setWorkouts({}); };
 
             const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
             const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay(); 
@@ -570,6 +488,7 @@
                     return;
                 }
                 setDraggedDate(dateStr);
+                // Set generic data for standard compliance, visual effect
                 e.dataTransfer.effectAllowed = "copyMove";
                 e.dataTransfer.setData("text/plain", dateStr);
             };
@@ -579,6 +498,7 @@
                 if (dateStr !== dragOverDate) {
                     setDragOverDate(dateStr);
                 }
+                // Optional: Change cursor based on modifier key
                 e.dataTransfer.dropEffect = (e.altKey || e.ctrlKey) ? "copy" : "move";
             };
 
@@ -598,26 +518,32 @@
                 const sourceData = workouts[draggedDate];
                 if (!sourceData) return;
 
+                // Copy if modifier key is held
                 const isCopy = e.altKey || e.ctrlKey;
+
+                const targetDocId = `${selectedAthleteId}_${targetDateStr}`;
+                const sourceDocId = `${selectedAthleteId}_${draggedDate}`;
+
                 const batch = db.batch();
-                const athleteDaysRef = db.collection("workouts").doc(selectedAthleteId).collection("days");
                 
+                // Clean up data before saving to new location
                 const { id, ...dataToMove } = sourceData;
+                
+                // Mark as updated by coach
                 dataToMove.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
                 dataToMove.hasUnreadCoachNote = true; // Alert athlete it was moved/copied
 
-                batch.set(athleteDaysRef.doc(targetDateStr), dataToMove, { merge: true });
+                batch.set(db.collection("workouts").doc(targetDocId), dataToMove, { merge: true });
 
                 if (!isCopy) {
-                    batch.delete(athleteDaysRef.doc(draggedDate));
+                    batch.delete(db.collection("workouts").doc(sourceDocId));
                 }
 
                 try {
                     await batch.commit();
-                    addToast(isCopy ? "Antrenman kopyalandı." : "Antrenman taşındı.", "success");
                 } catch (err) {
                     console.error("D&D Error:", err);
-                    addToast("Taşıma işlemi başarısız oldu!", "error");
+                    alert("Taşıma işlemi başarısız oldu!");
                 }
                 setDraggedDate(null);
             };
@@ -625,19 +551,18 @@
 
             const handleMarkRead = async () => {
                 if (!selectedDate || !selectedAthleteId) return;
+                const docId = `${selectedAthleteId}_${selectedDate}`;
                 
                 const workout = workouts[selectedDate];
                 if (!workout) return;
 
-                const workoutRef = db.collection("workouts").doc(selectedAthleteId).collection("days").doc(selectedDate);
-
                 if (isCoach && workout.hasUnreadUserNote) {
                     try {
                         const batch = db.batch();
+                        const workoutRef = db.collection("workouts").doc(docId);
                         const userRef = db.collection("users").doc(selectedAthleteId);
 
                         batch.set(workoutRef, { hasUnreadUserNote: false }, { merge: true });
-                        // Not: unreadNoteCount'u cloud function ile yönetmek daha güvenlidir.
                         const currentCount = athleteList.find(a => a.uid === selectedAthleteId)?.unreadNoteCount || 0;
                         if (currentCount > 0) {
                             batch.set(userRef, { unreadNoteCount: firebase.firestore.FieldValue.increment(-1) }, { merge: true });
@@ -649,7 +574,7 @@
                 
                 if (!isCoach && workout.hasUnreadCoachNote) {
                     try {
-                        await workoutRef.set({ hasUnreadCoachNote: false }, { merge: true });
+                        await db.collection("workouts").doc(docId).set({ hasUnreadCoachNote: false }, { merge: true });
                     } catch (err) { console.error("Error clearing athlete notification", err); }
                 }
             };
@@ -664,6 +589,7 @@
                 const newCoachNote = formData.get('coachNote') || "";
                 
                 const updatedWorkout = {
+                    athleteUid: selectedAthleteId,
                     title: formData.get('title'),
                     type: formData.get('type'),
                     type2: formData.get('type2'), 
@@ -677,34 +603,36 @@
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
 
+                // Notification logic
                 if (newCoachNote !== previousCoachNote || actionType !== 'update') {
                     updatedWorkout.hasUnreadCoachNote = true;
                 }
                 
                 const batch = db.batch();
-                const athleteDaysRef = db.collection("workouts").doc(selectedAthleteId).collection("days");
+                const targetDocId = `${selectedAthleteId}_${targetDate}`;
                 
-                batch.set(athleteDaysRef.doc(targetDate), updatedWorkout, { merge: true });
+                batch.set(db.collection("workouts").doc(targetDocId), updatedWorkout, { merge: true });
 
+                // If moving to a new date, delete the old one
                 if (actionType === 'move' && targetDate !== selectedDate) {
-                    batch.delete(athleteDaysRef.doc(selectedDate));
+                    batch.delete(db.collection("workouts").doc(`${selectedAthleteId}_${selectedDate}`));
                 }
 
                 try { 
                     await batch.commit();
-                    addToast("Program başarıyla kaydedildi.", "success");
                     setIsModalOpen(false); 
                 } catch (err) { 
-                    addToast("Kaydedilemedi! Lütfen bağlantınızı kontrol ediniz.", "error");
+                    alert("Kaydedilemedi! Lütfen bağlantınızı kontrol ediniz.");
                     console.error("Coach save error:", err);
                 }
             };
 
             const handleAthleteNoteSave = async (noteText) => {
                 const workoutExists = workouts[selectedDate];
-                if (!workoutExists && !noteText.trim()) return Promise.resolve();
+                if (!workoutExists && !noteText.trim()) return;
                 
-                const workoutRef = db.collection("workouts").doc(selectedAthleteId).collection("days").doc(selectedDate);
+                const docId = `${selectedAthleteId}_${selectedDate}`;
+                const workoutRef = db.collection("workouts").doc(docId);
                 const userRef = db.collection("users").doc(selectedAthleteId);
                 
                 try {
@@ -721,6 +649,7 @@
                     }
 
                     if (!workoutExists) {
+                        payload.athleteUid = selectedAthleteId;
                         payload.type = 'strength'; 
                         payload.status = 'pending'; 
                         payload.volume = ""; 
@@ -729,21 +658,17 @@
                     
                     batch.set(workoutRef, payload, { merge: true });
                     await batch.commit();
-                    return Promise.resolve();
                 } catch (err) { 
-                    console.error("Not kayıt hatası:", err); 
-                    return Promise.reject(err);
+                    console.error("Otomatik kayıt hatası:", err); 
                 }
             };
 
             const handleDeleteWorkout = async () => {
                 try {
-                    await db.collection("workouts").doc(selectedAthleteId).collection("days").doc(selectedDate).delete();
-                    addToast("Program silindi.", "info");
+                    const docId = `${selectedAthleteId}_${selectedDate}`;
+                    await db.collection("workouts").doc(docId).delete();
                     setIsModalOpen(false);
-                } catch (err) { 
-                    addToast("Silme işlemi başarısız oldu!", "error");
-                }
+                } catch (err) { alert("Silinemedi!"); }
             };
             
             const handleSelectAthlete = (uid) => {
@@ -765,39 +690,39 @@
                                         <p className="text-xs text-yellow-500 font-mono mt-0.5 tracking-wider">{APP_VERSION}</p>
                                     </div>
                                 </div>
-                                <button aria-label="Çıkış Yap" onClick={handleLogout} className="bg-slate-800 p-3.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-all active:scale-95 shadow-md"><Icons.LogOut size={20} /></button>
+                                <button onClick={handleLogout} className="bg-slate-800 p-3.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-all active:scale-95 shadow-md"><Icons.LogOut size={20} /></button>
                             </div>
                             
                             <h2 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
                                 <Icons.User size={14}/> Atlet Listesi
                             </h2>
                             
-                            <div className="grid gap-4">
+                            <div className="flex flex-col gap-4">
                                 {athleteList.length === 0 ? (
                                     <div className="p-10 text-center border-2 border-dashed border-slate-800 rounded-3xl text-slate-500 font-medium">Henüz kayıtlı atlet yok.</div>
                                 ) : (
                                     athleteList.map(athlete => (
-                                        <div key={athlete.uid} onClick={() => handleSelectAthlete(athlete.uid)} role="button" aria-label={`${athlete.displayName} profiline git`} className="bg-slate-900/50 border border-slate-800 hover:border-yellow-600/50 p-4 rounded-2xl flex items-center justify-between cursor-pointer transition-all duration-300 hover:bg-slate-800 hover:shadow-lg hover:-translate-y-0.5 group relative backdrop-blur-sm">
+                                        <div key={athlete.uid} onClick={() => handleSelectAthlete(athlete.uid)} className="bg-slate-900/50 border border-slate-800 hover:border-yellow-600/50 p-4 rounded-2xl flex items-center justify-between cursor-pointer transition-all duration-300 hover:bg-slate-800 hover:shadow-lg hover:-translate-y-0.5 group relative backdrop-blur-sm">
                                             <div className="flex items-center gap-4">
                                                 <div className="relative">
-                                                    <img src={athlete.photoURL || "https://via.placeholder.com/40"} className="w-14 h-14 rounded-full border-2 border-slate-700 group-hover:border-yellow-500 transition-colors object-cover" alt={`${athlete.displayName} avatar`}/>
+                                                    <img src={athlete.photoURL || "https://via.placeholder.com/40"} className="w-14 h-14 rounded-full border-2 border-slate-700 group-hover:border-yellow-500 transition-colors object-cover shrink-0" alt=""/>
                                                     {(athlete.unreadNoteCount || 0) > 0 && (
                                                         <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-slate-900 animate-pulse"></div>
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <h3 className="font-bold text-white text-lg tracking-tight">{athlete.displayName}</h3>
-                                                    <p className="text-xs text-slate-500 font-medium">{athlete.email}</p>
+                                                    <h3 className="font-bold text-white text-lg tracking-tight line-clamp-1">{athlete.displayName}</h3>
+                                                    <p className="text-xs text-slate-500 font-medium line-clamp-1">{athlete.email}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-4">
                                                 {(athlete.unreadNoteCount || 0) > 0 && (
-                                                    <div className="flex items-center gap-1.5 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20">
-                                                        <Icons.FileText size={12} className="text-amber-500"/>
-                                                        <span className="text-amber-500 text-xs font-bold">{athlete.unreadNoteCount} Yeni Not</span>
+                                                    <div className="flex items-center gap-1.5 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20 whitespace-nowrap shrink-0">
+                                                        <Icons.FileText size={12} className="text-amber-500 shrink-0"/>
+                                                        <span className="text-amber-500 text-xs font-bold whitespace-nowrap">{athlete.unreadNoteCount} Yeni Not</span>
                                                     </div>
                                                 )}
-                                                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-yellow-500/20 transition-colors">
+                                                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center shrink-0 group-hover:bg-yellow-500/20 transition-colors">
                                                     <Icons.ChevronRight className="text-slate-500 group-hover:text-yellow-500" size={18}/>
                                                 </div>
                                             </div>
@@ -817,7 +742,7 @@
                             <div className="flex justify-between items-center mb-5">
                                 <div className="flex items-center gap-3">
                                     {isCoach ? (
-                                        <button aria-label="Geri Dön" onClick={() => setSelectedAthleteId(null)} className="flex items-center justify-center w-10 h-10 bg-slate-900 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-all border border-slate-800">
+                                        <button onClick={() => setSelectedAthleteId(null)} className="flex items-center justify-center w-10 h-10 bg-slate-900 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-all border border-slate-800">
                                             <Icons.ChevronLeft size={20} />
                                         </button>
                                     ) : (
@@ -836,25 +761,25 @@
                                     </div>
                                 </div>
                                 {!isCoach && (
-                                    <button aria-label="Çıkış Yap" onClick={handleLogout} className="bg-slate-900 border border-slate-800 p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all"><Icons.LogOut size={18} /></button>
+                                    <button onClick={handleLogout} className="bg-slate-900 border border-slate-800 p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all"><Icons.LogOut size={18} /></button>
                                 )}
                             </div>
                             
                             <div className="flex items-center justify-between bg-slate-900 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
                                 {viewMode === 'year' ? (
                                     <>
-                                        <button aria-label="Önceki Yıl" onClick={prevYear} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronLeft size={20} /></button>
+                                        <button onClick={prevYear} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronLeft size={20} /></button>
                                         <h2 className="text-sm font-bold text-white tracking-wider uppercase">{currentDate.getFullYear()} İstatistikleri</h2>
-                                        <button aria-label="Sonraki Yıl" onClick={nextYear} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronRight size={20} /></button>
+                                        <button onClick={nextYear} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronRight size={20} /></button>
                                     </>
                                 ) : (
                                     <>
                                         <div className="flex gap-1">
-                                            <button aria-label="Yıllık Görünüm" onClick={() => setViewMode('year')} className="px-3 h-10 flex items-center justify-center rounded-xl hover:bg-yellow-500 hover:text-slate-950 text-yellow-500 transition-all font-bold text-[10px] uppercase tracking-widest gap-1 border border-yellow-500/30 bg-yellow-500/10"><Icons.Calendar size={14} /> YIL</button>
-                                            <button aria-label="Önceki Ay" onClick={prevMonth} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronLeft size={20} /></button>
+                                            <button onClick={() => setViewMode('year')} className="px-3 h-10 flex items-center justify-center rounded-xl hover:bg-yellow-500 hover:text-slate-950 text-yellow-500 transition-all font-bold text-[10px] uppercase tracking-widest gap-1 border border-yellow-500/30 bg-yellow-500/10"><Icons.Calendar size={14} /> YIL</button>
+                                            <button onClick={prevMonth} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronLeft size={20} /></button>
                                         </div>
                                         <h2 className="text-base font-bold text-white tracking-wide">{monthNames[currentDate.getMonth()]} <span className="text-slate-500 font-medium">{currentDate.getFullYear()}</span></h2>
-                                        <button aria-label="Sonraki Ay" onClick={nextMonth} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronRight size={20} /></button>
+                                        <button onClick={nextMonth} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronRight size={20} /></button>
                                     </>
                                 )}
                             </div>
@@ -875,7 +800,7 @@
                                     const total = stats.completed + stats.partial + stats.missed + stats.pending;
                                     
                                     return (
-                                        <div key={monthName} role="button" aria-label={`${monthName} istatistikleri`} onClick={() => {
+                                        <div key={monthName} onClick={() => {
                                             setCurrentDate(new Date(currentDate.getFullYear(), index, 1));
                                             setViewMode('month');
                                         }} className="bg-slate-900 border border-slate-800 hover:border-yellow-500/50 p-4 rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group relative">
@@ -950,9 +875,7 @@
 
                                         return (
                                             <div 
-                                                key={day}
-                                                role="button"
-                                                aria-label={`${dateStr} antrenman detayları`}
+                                                key={day} 
                                                 draggable={isCoach && !!workout}
                                                 onDragStart={(e) => handleDragStart(e, dateStr)}
                                                 onDragOver={(e) => handleDragOver(e, dateStr)}
@@ -1028,12 +951,6 @@
                 </div>
             );
         };
-
-        const App = () => (
-            <ToastProvider>
-                <AppContent />
-            </ToastProvider>
-        );
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
