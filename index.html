@@ -502,6 +502,40 @@
 
             const handleLogout = () => { auth.signOut(); setSelectedAthleteId(null); setWorkouts({}); };
 
+            const handleMigrateOldData = async () => {
+                try {
+                    const snapshot = await db.collection("workouts").get();
+                    const batch = db.batch();
+                    let count = 0;
+
+                    snapshot.forEach(doc => {
+                        // Eski yapıdaki ID'leri bul (içinde "_" olanlar)
+                        if (doc.id.includes('_')) {
+                            const parts = doc.id.split('_');
+                            const athleteUid = parts[0];
+                            const dateStr = parts[1];
+                            
+                            if (athleteUid && dateStr) {
+                                const newRef = getWorkoutRef(athleteUid, dateStr);
+                                batch.set(newRef, doc.data(), { merge: true });
+                                count++;
+                            }
+                        }
+                    });
+
+                    if (count === 0) {
+                        showToast("success", "Taşınacak eski veri bulunamadı.");
+                        return;
+                    }
+
+                    await batch.commit();
+                    showToast("success", `${count} adet eski program kurtarıldı! Lütfen sayfayı yenileyin.`);
+                } catch (error) {
+                    console.error("Migration error:", error);
+                    showToast("error", "Kurtarma sırasında hata oluştu.");
+                }
+            };
+
             const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
             const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay(); 
             const startingDayIndex = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
@@ -770,6 +804,9 @@
                                         <p className="text-xs text-yellow-500 font-mono mt-0.5 tracking-wider">{APP_VERSION}</p>
                                     </div>
                                 </div>
+                                <button type="button" onClick={handleMigrateOldData} className="bg-red-600 p-3.5 rounded-xl text-white hover:bg-red-500 transition-all active:scale-95 shadow-md mr-3 font-bold text-xs">
+    ESKİ VERİLERİ KURTAR
+</button>
                                 <button type="button" aria-label="Çıkış yap" onClick={handleLogout} className="bg-slate-800 p-3.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-all active:scale-95 shadow-md"><Icons.LogOut size={20} /></button>
                             </div>
                             
