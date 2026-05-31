@@ -58,7 +58,7 @@
     <script type="text/babel">
         // --- CONFIGURATION ---
         const ADMIN_EMAIL = "oray.gungor@gmail.com";
-        const APP_VERSION = "v2.0-hyrox-pro";
+        const APP_VERSION = "v1.6-hyrox-pro-db-refactor";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCu-H_z8dwFV7tc4uS1o79SDD-Cm7Hvei4",
@@ -76,11 +76,20 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
+        // --- FIRESTORE PATH HELPERS ---
+        const getWorkoutDaysCollection = (athleteUid) => {
+            return db.collection("workouts").doc(athleteUid).collection("days");
+        };
+
+        const getWorkoutRef = (athleteUid, date) => {
+            return getWorkoutDaysCollection(athleteUid).doc(date);
+        };
+
         // --- ICONS SYSTEM ---
         const { useState, useEffect, useRef } = React;
 
         const IconBase = ({ size = 24, children, ...props }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
                 {children}
             </svg>
         );
@@ -110,7 +119,7 @@
             FileText: (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></IconBase>
         };
 
-        // --- HYROX WORKOUT TYPES ---
+        // --- HYROX WORKOUT TYPES & VALS ---
         const WORKOUT_TYPES = {
             run: { label: "Koşu", bgColor: "bg-blue-900/40", bgRaw: "bg-blue-900", textColor: "text-blue-100", defaultBorder: "border-blue-700/50", icon: <Icons.MapPin size={11} className="text-blue-400" /> },
             threshold: { label: "Threshold/Interval", bgColor: "bg-orange-900/40", bgRaw: "bg-orange-900", textColor: "text-orange-100", defaultBorder: "border-orange-700/50", icon: <Icons.Timer size={11} className="text-orange-400" /> },
@@ -118,6 +127,9 @@
             simulation: { label: "Hyrox Simülasyon", bgColor: "bg-yellow-600/40", bgRaw: "bg-yellow-600", textColor: "text-yellow-100", defaultBorder: "border-yellow-500/50", icon: <Icons.Flag size={11} className="text-yellow-400" /> },
             strength: { label: "Genel Kuvvet", bgColor: "bg-zinc-800", bgRaw: "bg-zinc-800", textColor: "text-zinc-200", defaultBorder: "border-zinc-600", icon: <Icons.Dumbbell size={11} className="text-zinc-400" /> }
         };
+
+        const VALID_TYPES = Object.keys(WORKOUT_TYPES);
+        const VALID_STATUSES = ["completed", "partial", "missed", "pending"];
 
         const STATUS_STYLES = {
             completed: "!border-4 !border-green-500 shadow-[0_0_15px_-3px_rgba(34,197,94,0.6)]",
@@ -197,12 +209,12 @@
             const dateChanged = modalDate !== selectedDate;
 
             return (
-                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in">
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in" role="dialog" aria-modal="true">
                     <div className="bg-slate-900 w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl border border-slate-700 shadow-2xl shadow-black overflow-hidden flex flex-col max-h-[95vh] slide-in relative">
                         <div className="bg-slate-800/80 p-4 border-b border-slate-700 flex justify-between items-center sticky top-0 z-10 backdrop-blur-xl">
                             <div className="flex items-center gap-3 flex-1">
                                 {hasWorkout && isCoach && (
-                                    <button type="button" onClick={handleDeleteClick} className={`p-2 rounded-xl transition-all border mr-1 group flex items-center gap-2 ${deleteConfirm ? "bg-red-600 text-white border-red-600 px-3 shadow-lg shadow-red-600/30" : "bg-slate-900 hover:bg-red-500/10 text-slate-400 hover:text-red-500 border-slate-700"}`} title="Sil">
+                                    <button type="button" aria-label="Sil" onClick={handleDeleteClick} className={`p-2 rounded-xl transition-all border mr-1 group flex items-center gap-2 ${deleteConfirm ? "bg-red-600 text-white border-red-600 px-3 shadow-lg shadow-red-600/30" : "bg-slate-900 hover:bg-red-500/10 text-slate-400 hover:text-red-500 border-slate-700"}`} title="Sil">
                                         <Icons.Trash2 size={18} /> {deleteConfirm && <span className="text-xs font-bold whitespace-nowrap">Sil?</span>}
                                     </button>
                                 )}
@@ -226,7 +238,7 @@
                                     )}
                                 </div>
                             </div>
-                            <button type="button" onClick={onClose} className="text-slate-400 hover:text-white p-2 transition-colors ml-2 bg-slate-900 rounded-xl border border-slate-700 hover:border-slate-500"><Icons.X size={20} /></button>
+                            <button type="button" aria-label="Kapat" onClick={onClose} className="text-slate-400 hover:text-white p-2 transition-colors ml-2 bg-slate-900 rounded-xl border border-slate-700 hover:border-slate-500"><Icons.X size={20} /></button>
                         </div>
 
                         <div className="p-5 overflow-y-auto custom-scrollbar bg-gradient-to-b from-slate-900 to-slate-950">
@@ -284,35 +296,33 @@
                                     {/* AÇIKLAMA GÖRÜNÜMÜ - Tıklanabilir Önizleme */}
                                     <div>
                                         <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1 block tracking-wider">Açıklama / WOD Detayı</label>
-                                        <div onClick={() => setActivePopup('description')} className="w-full p-3.5 bg-slate-900 border border-slate-700 rounded-xl cursor-pointer hover:border-yellow-500 transition-all shadow-inner group min-h-[50px] relative">
+                                        <button type="button" aria-haspopup="dialog" aria-expanded={activePopup === 'description'} onClick={() => setActivePopup('description')} className="block w-full text-left p-3.5 bg-slate-900 border border-slate-700 rounded-xl cursor-pointer hover:border-yellow-500 transition-all shadow-inner group min-h-[50px] relative">
                                             <p className={`text-sm leading-relaxed whitespace-pre-wrap line-clamp-3 ${localDescription ? 'text-slate-200' : 'text-slate-600'}`}>
                                                 {localDescription || "Antrenman detaylarını girmek/görmek için tıklayın..."}
                                             </p>
-                                        </div>
-                                        {/* Arka planda formu besleyen hidden input */}
+                                        </button>
                                         <input type="hidden" name="description" value={localDescription} />
                                     </div>
                                 </div>
 
                                 <div className="space-y-4 pt-4 border-t border-slate-800">
                                     {/* COACH NOTU GÖRÜNÜMÜ - Tıklanabilir Önizleme */}
-                                    <div className="bg-gradient-to-br from-amber-950/40 to-slate-900 p-4 rounded-xl border border-amber-900/40 shadow-sm relative overflow-hidden cursor-pointer hover:border-amber-500/50 transition-all group" onClick={() => setActivePopup('coachNote')}>
+                                    <button type="button" aria-haspopup="dialog" aria-expanded={activePopup === 'coachNote'} className="block w-full text-left bg-gradient-to-br from-amber-950/40 to-slate-900 p-4 rounded-xl border border-amber-900/40 shadow-sm relative overflow-hidden cursor-pointer hover:border-amber-500/50 transition-all group" onClick={() => setActivePopup('coachNote')}>
                                         <div className="absolute top-0 left-0 w-1 h-full bg-amber-500 group-hover:w-1.5 transition-all"></div>
                                         <div className="flex justify-between items-center mb-2">
-                                            <label className="flex items-center gap-2 text-[10px] font-bold text-amber-500 uppercase tracking-widest"><Icons.Zap size={14} /> Coach Notu</label>
+                                            <label className="flex items-center gap-2 text-[10px] font-bold text-amber-500 uppercase tracking-widest cursor-pointer"><Icons.Zap size={14} /> Coach Notu</label>
                                             <Icons.MoveRight size={14} className="text-amber-500/50 group-hover:text-amber-500 transition-colors" />
                                         </div>
                                         <p className={`text-sm leading-relaxed whitespace-pre-wrap line-clamp-2 ${localCoachNote ? 'text-amber-100' : 'text-amber-700/50'}`}>
                                             {localCoachNote || "Atlet için özel not girmek/görmek için tıklayın..."}
                                         </p>
-                                        {/* Arka planda formu besleyen hidden input */}
-                                        <input type="hidden" name="coachNote" value={localCoachNote} />
-                                    </div>
+                                    </button>
+                                    <input type="hidden" name="coachNote" value={localCoachNote} />
                                     
                                     {/* SPORCU NOTU GÖRÜNÜMÜ - Tıklanabilir Önizleme */}
-                                    <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 relative shadow-sm cursor-pointer hover:border-slate-500 transition-all group" onClick={() => setActivePopup('userNote')}>
+                                    <button type="button" aria-haspopup="dialog" aria-expanded={activePopup === 'userNote'} className="block w-full text-left bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 relative shadow-sm cursor-pointer hover:border-slate-500 transition-all group" onClick={() => setActivePopup('userNote')}>
                                         <div className="flex justify-between items-center mb-2">
-                                            <label className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest group-hover:text-slate-300 transition-colors"><Icons.Dumbbell size={14} /> Sporcu Geri Bildirimi</label>
+                                            <label className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest cursor-pointer group-hover:text-slate-300 transition-colors"><Icons.Dumbbell size={14} /> Sporcu Geri Bildirimi</label>
                                             <div className="flex items-center gap-2">
                                                 {!isCoach && saveStatus === 'saved' && <span className="text-[10px] text-green-400 flex items-center gap-1 bg-green-500/10 px-2 py-0.5 rounded-full"><Icons.CheckCircle2 size={12} /> Kaydedildi</span>}
                                                 <Icons.MoveRight size={14} className="text-slate-600 group-hover:text-slate-400 transition-colors" />
@@ -321,9 +331,8 @@
                                         <p className={`text-sm leading-relaxed whitespace-pre-wrap line-clamp-2 ${localUserNote ? 'text-white' : 'text-slate-500'}`}>
                                             {localUserNote || (isCoach ? "Sporcu henüz not girmedi..." : "Antrenman nasıl geçti? Notlarını yazmak için tıkla...")}
                                         </p>
-                                        {/* Arka planda formu besleyen hidden input (Gerçi sporcu notu onBlur ile autosave oluyor ama bütünlük açısından ekliyoruz) */}
-                                        <input type="hidden" name="userNote" value={localUserNote} />
-                                    </div>
+                                    </button>
+                                    <input type="hidden" name="userNote" value={localUserNote} />
                                 </div>
                                 <div className="h-4 sm:h-0"></div>
                             </form>
@@ -354,7 +363,7 @@
 
                         {/* POPUP OVERLAY */}
                         {activePopup && (
-                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in">
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in" role="dialog" aria-modal="true">
                                 <div className="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col slide-in max-h-[90vh]">
                                     <div className="bg-slate-800/80 p-4 border-b border-slate-700 flex justify-between items-center backdrop-blur-sm">
                                         <h3 className="font-bold text-white flex items-center gap-2">
@@ -362,7 +371,7 @@
                                             {activePopup === 'coachNote' && <><Icons.Zap size={18} className="text-amber-500" /> Coach Notu</>}
                                             {activePopup === 'userNote' && <><Icons.Dumbbell size={18} className="text-slate-400" /> Sporcu Geri Bildirimi</>}
                                         </h3>
-                                        <button type="button" onClick={closePopup} className="text-slate-400 hover:text-white p-2 transition-colors bg-slate-900 rounded-xl border border-slate-700 hover:border-slate-500"><Icons.X size={20} /></button>
+                                        <button type="button" aria-label="Kapat" onClick={closePopup} className="text-slate-400 hover:text-white p-2 transition-colors bg-slate-900 rounded-xl border border-slate-700 hover:border-slate-500"><Icons.X size={20} /></button>
                                     </div>
                                     <div className="p-5 flex-1 overflow-y-auto">
                                         <textarea
@@ -408,6 +417,7 @@
             const [isLoading, setIsLoading] = useState(true);
             const [athleteList, setAthleteList] = useState([]);
             const [selectedAthleteId, setSelectedAthleteId] = useState(null);
+            const [toast, setToast] = useState(null);
             
             // Drag and Drop State
             const [draggedDate, setDraggedDate] = useState(null);
@@ -415,20 +425,29 @@
 
             const isCoach = user?.email === ADMIN_EMAIL;
 
+            const showToast = (type, message) => {
+                setToast({ type, message });
+                setTimeout(() => setToast(null), 3000);
+            };
+
             useEffect(() => {
                 const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
                     setUser(currentUser);
                     if (currentUser) {
-                        await db.collection('users').doc(currentUser.uid).set({
-                            uid: currentUser.uid,
-                            email: currentUser.email,
-                            displayName: currentUser.displayName,
-                            photoURL: currentUser.photoURL,
-                            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-                        }, { merge: true });
+                        try {
+                            await db.collection('users').doc(currentUser.uid).set({
+                                uid: currentUser.uid,
+                                email: currentUser.email,
+                                displayName: currentUser.displayName,
+                                photoURL: currentUser.photoURL,
+                                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                            }, { merge: true });
 
-                        if (currentUser.email !== ADMIN_EMAIL) {
-                            setSelectedAthleteId(currentUser.uid);
+                            if (currentUser.email !== ADMIN_EMAIL) {
+                                setSelectedAthleteId(currentUser.uid);
+                            }
+                        } catch (err) {
+                            console.error("User update err:", err);
                         }
                     }
                     setIsLoading(false);
@@ -438,31 +457,47 @@
 
             useEffect(() => {
                 if (isCoach) {
-                    const unsubscribe = db.collection('users').onSnapshot(snapshot => {
-                        const users = snapshot.docs.map(doc => doc.data()).filter(u => u.email !== ADMIN_EMAIL);
-                        setAthleteList(users);
-                    });
+                    const unsubscribe = db.collection('users').onSnapshot(
+                        snapshot => {
+                            const users = snapshot.docs.map(doc => doc.data()).filter(u => u.email !== ADMIN_EMAIL);
+                            setAthleteList(users);
+                        },
+                        error => {
+                            console.error("Users load error:", error);
+                            showToast("error", "Atlet listesi yüklenemedi.");
+                        }
+                    );
                     return () => unsubscribe();
                 }
             }, [isCoach]);
 
             useEffect(() => {
                 if (!selectedAthleteId) return;
-                const unsubscribe = db.collection("workouts").where("athleteUid", "==", selectedAthleteId).onSnapshot((snapshot) => {
+                const unsubscribe = getWorkoutDaysCollection(selectedAthleteId).onSnapshot(
+                    (snapshot) => {
                         const data = {};
                         snapshot.forEach(doc => {
                             const workoutData = doc.data();
-                            const dateKey = doc.id.split('_').pop(); 
-                            if(dateKey) data[dateKey] = { ...workoutData, id: doc.id };
+                            data[doc.id] = { ...workoutData, id: doc.id };
                         });
                         setWorkouts(data);
-                    });
+                    },
+                    (error) => {
+                        console.error("Workout load error:", error);
+                        showToast("error", "Programlar yüklenemedi.");
+                    }
+                );
                 return () => unsubscribe();
             }, [selectedAthleteId]);
 
             const handleGoogleLogin = async () => {
                 const provider = new firebase.auth.GoogleAuthProvider();
-                try { await auth.signInWithPopup(provider); } catch (error) { alert("Giriş başarısız: " + error.message); }
+                try { 
+                    await auth.signInWithPopup(provider); 
+                } catch (error) { 
+                    console.error("Login err:", error);
+                    showToast("error", "Giriş başarısız."); 
+                }
             };
 
             const handleLogout = () => { auth.signOut(); setSelectedAthleteId(null); setWorkouts({}); };
@@ -513,17 +548,15 @@
                     return;
                 }
                 setDraggedDate(dateStr);
-                // Set generic data for standard compliance, visual effect
                 e.dataTransfer.effectAllowed = "copyMove";
                 e.dataTransfer.setData("text/plain", dateStr);
             };
 
             const handleDragOver = (e, dateStr) => {
-                e.preventDefault(); // Necessary to allow dropping
+                e.preventDefault(); 
                 if (dateStr !== dragOverDate) {
                     setDragOverDate(dateStr);
                 }
-                // Optional: Change cursor based on modifier key
                 e.dataTransfer.dropEffect = (e.altKey || e.ctrlKey) ? "copy" : "move";
             };
 
@@ -543,40 +576,33 @@
                 const sourceData = workouts[draggedDate];
                 if (!sourceData) return;
 
-                // Copy if modifier key is held
                 const isCopy = e.altKey || e.ctrlKey;
-
-                const targetDocId = `${selectedAthleteId}_${targetDateStr}`;
-                const sourceDocId = `${selectedAthleteId}_${draggedDate}`;
-
                 const batch = db.batch();
                 
-                // Clean up data before saving to new location
                 const { id, ...dataToMove } = sourceData;
                 
-                // Mark as updated by coach
                 dataToMove.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
-                dataToMove.hasUnreadCoachNote = true; // Alert athlete it was moved/copied
+                dataToMove.hasUnreadCoachNote = true; 
 
-                batch.set(db.collection("workouts").doc(targetDocId), dataToMove, { merge: true });
+                batch.set(getWorkoutRef(selectedAthleteId, targetDateStr), dataToMove, { merge: true });
 
                 if (!isCopy) {
-                    batch.delete(db.collection("workouts").doc(sourceDocId));
+                    batch.delete(getWorkoutRef(selectedAthleteId, draggedDate));
                 }
 
                 try {
                     await batch.commit();
+                    showToast("success", isCopy ? "Program kopyalandı." : "Program taşındı.");
                 } catch (err) {
                     console.error("D&D Error:", err);
-                    alert("Taşıma işlemi başarısız oldu!");
+                    showToast("error", "Taşıma işlemi başarısız oldu.");
                 }
                 setDraggedDate(null);
             };
 
-
             const handleMarkRead = async () => {
                 if (!selectedDate || !selectedAthleteId) return;
-                const docId = `${selectedAthleteId}_${selectedDate}`;
+                const workoutRef = getWorkoutRef(selectedAthleteId, selectedDate);
                 
                 const workout = workouts[selectedDate];
                 if (!workout) return;
@@ -584,7 +610,6 @@
                 if (isCoach && workout.hasUnreadUserNote) {
                     try {
                         const batch = db.batch();
-                        const workoutRef = db.collection("workouts").doc(docId);
                         const userRef = db.collection("users").doc(selectedAthleteId);
 
                         batch.set(workoutRef, { hasUnreadUserNote: false }, { merge: true });
@@ -599,7 +624,7 @@
                 
                 if (!isCoach && workout.hasUnreadCoachNote) {
                     try {
-                        await db.collection("workouts").doc(docId).set({ hasUnreadCoachNote: false }, { merge: true });
+                        await workoutRef.set({ hasUnreadCoachNote: false }, { merge: true });
                     } catch (err) { console.error("Error clearing athlete notification", err); }
                 }
             };
@@ -608,47 +633,68 @@
                 e.preventDefault();
                 if (!user || !selectedAthleteId) return;
                 const formData = new FormData(e.target);
-                const rpeVal = formData.get('rpe');
                 
+                // Client-side Validations
+                const type = formData.get('type');
+                if (!type || !VALID_TYPES.includes(type)) {
+                    showToast("error", "Geçersiz antrenman tipi!");
+                    return;
+                }
+
+                let status = formData.get('status');
+                if (!status || !VALID_STATUSES.includes(status)) status = 'pending';
+
+                let type2 = formData.get('type2');
+                if (!type2 || !VALID_TYPES.includes(type2)) type2 = 'none';
+
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
+                    showToast("error", "Geçersiz tarih formatı!");
+                    return;
+                }
+
+                const rpeVal = formData.get('rpe');
+                let parsedRpe = rpeVal === "" ? null : Number(rpeVal);
+                if (parsedRpe !== null && (parsedRpe < 1 || parsedRpe > 10)) {
+                    showToast("error", "RPE değeri 1 ile 10 arasında olmalıdır!");
+                    return;
+                }
+
                 const previousCoachNote = workouts[selectedDate]?.coachNote || "";
                 const newCoachNote = formData.get('coachNote') || "";
                 
                 const updatedWorkout = {
                     athleteUid: selectedAthleteId,
                     title: formData.get('title'),
-                    type: formData.get('type'),
-                    type2: formData.get('type2'), 
+                    type: type,
+                    type2: type2, 
                     volume: formData.get('volume'),
-                    rpe: rpeVal === "" ? null : Number(rpeVal),
+                    rpe: parsedRpe,
                     description: formData.get('description'),
-                    status: formData.get('status'),
+                    status: status,
                     coachNote: newCoachNote,
                     userNote: formData.get('userNote'),
                     updatedBy: user.email,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
 
-                // Notification logic
                 if (newCoachNote !== previousCoachNote || actionType !== 'update') {
                     updatedWorkout.hasUnreadCoachNote = true;
                 }
                 
                 const batch = db.batch();
-                const targetDocId = `${selectedAthleteId}_${targetDate}`;
-                
-                batch.set(db.collection("workouts").doc(targetDocId), updatedWorkout, { merge: true });
+                batch.set(getWorkoutRef(selectedAthleteId, targetDate), updatedWorkout, { merge: true });
 
-                // If moving to a new date, delete the old one
                 if (actionType === 'move' && targetDate !== selectedDate) {
-                    batch.delete(db.collection("workouts").doc(`${selectedAthleteId}_${selectedDate}`));
+                    batch.delete(getWorkoutRef(selectedAthleteId, selectedDate));
                 }
 
                 try { 
                     await batch.commit();
-                    setIsModalOpen(false); 
+                    setIsModalOpen(false);
+                    showToast("success", "Program kaydedildi.");
                 } catch (err) { 
-                    alert("Kaydedilemedi! Lütfen bağlantınızı kontrol ediniz.");
                     console.error("Coach save error:", err);
+                    showToast("error", "Program kaydedilemedi.");
                 }
             };
 
@@ -656,8 +702,7 @@
                 const workoutExists = workouts[selectedDate];
                 if (!workoutExists && !noteText.trim()) return;
                 
-                const docId = `${selectedAthleteId}_${selectedDate}`;
-                const workoutRef = db.collection("workouts").doc(docId);
+                const workoutRef = getWorkoutRef(selectedAthleteId, selectedDate);
                 const userRef = db.collection("users").doc(selectedAthleteId);
                 
                 try {
@@ -685,15 +730,19 @@
                     await batch.commit();
                 } catch (err) { 
                     console.error("Otomatik kayıt hatası:", err); 
+                    showToast("error", "Not kaydedilemedi.");
                 }
             };
 
             const handleDeleteWorkout = async () => {
                 try {
-                    const docId = `${selectedAthleteId}_${selectedDate}`;
-                    await db.collection("workouts").doc(docId).delete();
+                    await getWorkoutRef(selectedAthleteId, selectedDate).delete();
                     setIsModalOpen(false);
-                } catch (err) { alert("Silinemedi!"); }
+                    showToast("success", "Program silindi.");
+                } catch (err) { 
+                    console.error(err);
+                    showToast("error", "Silinemedi."); 
+                }
             };
             
             const handleSelectAthlete = (uid) => {
@@ -706,6 +755,12 @@
             if (isCoach && !selectedAthleteId) {
                 return (
                     <div className="min-h-screen bg-slate-950 text-slate-200 p-6 animate-in">
+                        {toast && (
+                            <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[9999] px-6 py-3 rounded-2xl shadow-2xl font-bold text-sm flex items-center gap-2 animate-in slide-in-from-top-4 backdrop-blur-md border ${toast.type === 'error' ? 'bg-red-500/90 border-red-400 text-white shadow-red-900/50' : 'bg-green-500/90 border-green-400 text-white shadow-green-900/50'}`}>
+                                {toast.type === 'error' ? <Icons.XCircle size={18} /> : <Icons.CheckCircle2 size={18} />}
+                                {toast.message}
+                            </div>
+                        )}
                         <div className="max-w-2xl mx-auto">
                             <div className="flex justify-between items-center mb-8">
                                 <div className="flex items-center gap-4">
@@ -715,7 +770,7 @@
                                         <p className="text-xs text-yellow-500 font-mono mt-0.5 tracking-wider">{APP_VERSION}</p>
                                     </div>
                                 </div>
-                                <button onClick={handleLogout} className="bg-slate-800 p-3.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-all active:scale-95 shadow-md"><Icons.LogOut size={20} /></button>
+                                <button type="button" aria-label="Çıkış yap" onClick={handleLogout} className="bg-slate-800 p-3.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-all active:scale-95 shadow-md"><Icons.LogOut size={20} /></button>
                             </div>
                             
                             <h2 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
@@ -762,12 +817,19 @@
 
             return (
                 <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-yellow-500/30 pb-24 animate-in">
+                    {toast && (
+                        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[9999] px-6 py-3 rounded-2xl shadow-2xl font-bold text-sm flex items-center gap-2 animate-in slide-in-from-top-4 backdrop-blur-md border ${toast.type === 'error' ? 'bg-red-500/90 border-red-400 text-white shadow-red-900/50' : 'bg-green-500/90 border-green-400 text-white shadow-green-900/50'}`}>
+                            {toast.type === 'error' ? <Icons.XCircle size={18} /> : <Icons.CheckCircle2 size={18} />}
+                            {toast.message}
+                        </div>
+                    )}
+                    
                     <div className="sticky top-0 z-30 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800/80 shadow-md">
                         <div className="max-w-md mx-auto px-4 pt-4 pb-3">
                             <div className="flex justify-between items-center mb-5">
                                 <div className="flex items-center gap-3">
                                     {isCoach ? (
-                                        <button onClick={() => setSelectedAthleteId(null)} className="flex items-center justify-center w-10 h-10 bg-slate-900 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-all border border-slate-800">
+                                        <button type="button" aria-label="Atlet listesine dön" onClick={() => setSelectedAthleteId(null)} className="flex items-center justify-center w-10 h-10 bg-slate-900 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-all border border-slate-800">
                                             <Icons.ChevronLeft size={20} />
                                         </button>
                                     ) : (
@@ -786,25 +848,25 @@
                                     </div>
                                 </div>
                                 {!isCoach && (
-                                    <button onClick={handleLogout} className="bg-slate-900 border border-slate-800 p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all"><Icons.LogOut size={18} /></button>
+                                    <button type="button" aria-label="Çıkış yap" onClick={handleLogout} className="bg-slate-900 border border-slate-800 p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all"><Icons.LogOut size={18} /></button>
                                 )}
                             </div>
                             
                             <div className="flex items-center justify-between bg-slate-900 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
                                 {viewMode === 'year' ? (
                                     <>
-                                        <button onClick={prevYear} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronLeft size={20} /></button>
+                                        <button type="button" aria-label="Önceki yıl" onClick={prevYear} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronLeft size={20} /></button>
                                         <h2 className="text-sm font-bold text-white tracking-wider uppercase">{currentDate.getFullYear()} İstatistikleri</h2>
-                                        <button onClick={nextYear} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronRight size={20} /></button>
+                                        <button type="button" aria-label="Sonraki yıl" onClick={nextYear} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronRight size={20} /></button>
                                     </>
                                 ) : (
                                     <>
                                         <div className="flex gap-1">
-                                            <button onClick={() => setViewMode('year')} className="px-3 h-10 flex items-center justify-center rounded-xl hover:bg-yellow-500 hover:text-slate-950 text-yellow-500 transition-all font-bold text-[10px] uppercase tracking-widest gap-1 border border-yellow-500/30 bg-yellow-500/10"><Icons.Calendar size={14} /> YIL</button>
-                                            <button onClick={prevMonth} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronLeft size={20} /></button>
+                                            <button type="button" aria-label="Yıl görünümüne geç" onClick={() => setViewMode('year')} className="px-3 h-10 flex items-center justify-center rounded-xl hover:bg-yellow-500 hover:text-slate-950 text-yellow-500 transition-all font-bold text-[10px] uppercase tracking-widest gap-1 border border-yellow-500/30 bg-yellow-500/10"><Icons.Calendar size={14} /> YIL</button>
+                                            <button type="button" aria-label="Önceki ay" onClick={prevMonth} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronLeft size={20} /></button>
                                         </div>
                                         <h2 className="text-base font-bold text-white tracking-wide">{monthNames[currentDate.getMonth()]} <span className="text-slate-500 font-medium">{currentDate.getFullYear()}</span></h2>
-                                        <button onClick={nextMonth} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronRight size={20} /></button>
+                                        <button type="button" aria-label="Sonraki ay" onClick={nextMonth} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><Icons.ChevronRight size={20} /></button>
                                     </>
                                 )}
                             </div>
@@ -961,6 +1023,7 @@
                     </div>
                     {isModalOpen && (
                         <WorkoutModal 
+                            key={selectedDate}
                             selectedDate={selectedDate} 
                             workout={workouts[selectedDate] || {}} 
                             isCoach={isCoach}
